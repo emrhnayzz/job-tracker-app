@@ -13,18 +13,17 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// --- SCHEMA DEFINITION ---
+/* --- DATABASE SCHEMA --- */
 const createTableQuery = `
-  -- !!! IMPORTANT: This line resets the table to ensure all columns exist.
-  -- After running successfully once, you can comment the next line out to keep your data.
-  --DROP TABLE IF EXISTS applications; 
+  -- Un-comment the next line ONLY if you want to reset the table (Delete all data)
+  -- DROP TABLE IF EXISTS applications;
   
   CREATE TABLE IF NOT EXISTS applications (
     id SERIAL PRIMARY KEY,
     company VARCHAR(255) NOT NULL,
     position VARCHAR(255) NOT NULL,
     status VARCHAR(50) DEFAULT 'Applied',
-    applied_date DATE DEFAULT CURRENT_DATE,
+    applied_date DATE DEFAULT CURRENT_DATE,  -- Ensure this column exists
     work_type VARCHAR(50),
     location VARCHAR(100),
     salary_min INTEGER,
@@ -47,7 +46,7 @@ pool
     return client
       .query(createTableQuery)
       .then(() => {
-        console.log("✅ Table 'applications' reset & ready.");
+        console.log("✅ Table check completed.");
         client.release();
       })
       .catch((err) => {
@@ -55,19 +54,22 @@ pool
         client.release();
       });
   })
-  .catch((err) => console.error("❌ Connection error:", err));
+  .catch((err) => console.error("❌ Database connection error:", err));
 
 app.get("/", (req, res) => {
   res.send("Job Tracker API Running 🚀");
 });
 
-// --- POST ENDPOINT (Fixed & Robust) ---
+// --- POST ENDPOINT (Fixed for Date & Parameters) ---
 app.post("/applications", async (req, res) => {
   try {
+    console.log("📥 New Application Request:", req.body); // Debug Log
+
     const {
       company,
       position,
       status,
+      applied_date,
       work_type,
       location,
       salary_min,
@@ -80,29 +82,32 @@ app.post("/applications", async (req, res) => {
       notes,
     } = req.body;
 
-    // Helper: Convert empty strings to NULL (Postgres hates empty strings for INTEGERS)
+    // Helpers to clean empty strings
     const cleanInt = (val) =>
       val === "" || val === null ? null : parseInt(val);
     const cleanStr = (val) => (val === "" ? null : val);
 
+    // SQL Query: Must have exactly 14 placeholders ($1 to $14)
     const query = `
       INSERT INTO applications (
-        company, position, status, work_type, location, 
+        company, position, status, applied_date, work_type, location, 
         salary_min, salary_max, currency, link, description, 
         recruiter_name, recruiter_email, notes
       ) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
       RETURNING *
     `;
 
+    // Values Array: Must have exactly 14 items
     const values = [
       company,
       position,
       status || "Applied",
+      applied_date || new Date(), // Handle date
       cleanStr(work_type),
       cleanStr(location),
-      cleanInt(salary_min), // Safe integer conversion
-      cleanInt(salary_max), // Safe integer conversion
+      cleanInt(salary_min),
+      cleanInt(salary_max),
       currency || "EUR",
       cleanStr(link),
       cleanStr(description),
@@ -112,10 +117,11 @@ app.post("/applications", async (req, res) => {
     ];
 
     const newApp = await pool.query(query, values);
+
+    console.log("✅ Saved to DB:", newApp.rows[0].company);
     res.json(newApp.rows[0]);
-    console.log(`🆕 Added: ${company}`);
   } catch (err) {
-    console.error("❌ POST Error Details:", err.message); // This will show in terminal
+    console.error("❌ POST Error Details:", err.message); // Look at terminal for this!
     res.status(500).send("Server Error: " + err.message);
   }
 });
@@ -126,6 +132,29 @@ app.get("/applications", async (req, res) => {
       "SELECT * FROM applications ORDER BY created_at DESC"
     );
     res.json(allApps.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// 4. DELETE - Remove an application by ID
+app.delete("/applications/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // DELETE query
+    const deleteOp = await pool.query(
+      "DELETE FROM applications WHERE id = $1 RETURNING *",
+      [id]
+    );
+
+    if (deleteOp.rowCount === 0) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    res.json({ message: "Application deleted successfully!" });
+    console.log(`🗑️ Deleted Application ID: ${id}`);
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");

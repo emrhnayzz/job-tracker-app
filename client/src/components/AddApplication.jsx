@@ -5,11 +5,14 @@ import { useNavigate } from "react-router-dom";
 const AddApplication = () => {
   const navigate = useNavigate();
 
-  // Form State: Matches our Database Schema
+  const getTodayString = () => new Date().toISOString().split("T")[0];
+
+  // Form State: Matches the Database Schema
   const [formData, setFormData] = useState({
     company: "",
     position: "",
     status: "Applied",
+    applied_date: getTodayString(),
     work_type: "Remote",
     location: "",
     salary_min: "",
@@ -25,7 +28,7 @@ const AddApplication = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Handle Input Change
+  // Handle changes for all input fields
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -37,11 +40,12 @@ const AddApplication = () => {
     setError(null);
 
     try {
-      // Send POST request to backend
+      // Send POST request to the backend
+
       await axios.post("http://localhost:5001/applications", formData);
       console.log("✅ Application added successfully!");
 
-      // Redirect back to the Dashboard
+      // Redirect back to the Dashboard (Home)
       navigate("/");
     } catch (err) {
       console.error("Error adding application:", err);
@@ -57,6 +61,7 @@ const AddApplication = () => {
         Add New Application
       </h2>
 
+      {/* Error Message Display */}
       {error && (
         <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
       )}
@@ -94,8 +99,22 @@ const AddApplication = () => {
           </div>
         </div>
 
-        {/* --- SECTION 2: STATUS & TYPE --- */}
+        {/* --- SECTION 2: STATUS, DATE & TYPE --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Date Picker Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Applied Date
+            </label>
+            <input
+              type="date"
+              name="applied_date"
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              value={formData.applied_date}
+              onChange={handleChange}
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
@@ -112,6 +131,7 @@ const AddApplication = () => {
               <option value="Rejected">Rejected</option>
             </select>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Work Type
@@ -127,6 +147,10 @@ const AddApplication = () => {
               <option value="On-site">On-site</option>
             </select>
           </div>
+        </div>
+
+        {/* --- SECTION 3: LOCATION & SALARY --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Location
@@ -135,14 +159,14 @@ const AddApplication = () => {
               type="text"
               name="location"
               className="w-full p-2 border border-gray-300 rounded-lg"
-              placeholder="e.g. Berlin"
+              placeholder="e.g. Berlin, Germany"
               value={formData.location}
               onChange={handleChange}
             />
           </div>
         </div>
 
-        {/* --- SECTION 3: SALARY --- */}
+        {/* Salary Group */}
         <div className="grid grid-cols-3 gap-6 bg-gray-50 p-4 rounded-lg">
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -216,7 +240,7 @@ const AddApplication = () => {
           ></textarea>
         </div>
 
-        {/* --- SUBMIT BUTTON --- */}
+        {/* --- SUBMIT BUTTONS --- */}
         <div className="flex justify-end gap-4 pt-4">
           <button
             type="button"
