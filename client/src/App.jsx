@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import ApplicationList from "./components/ApplicationList";
 import AddApplication from "./components/AddApplication";
+import EditApplication from "./components/EditApplication";
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
 
             {/* Add Route: Show the form */}
             <Route path="/add" element={<AddApplication />} />
+            <Route path="/edit/:id" element={<EditApplication />} />
           </Routes>
         </main>
 

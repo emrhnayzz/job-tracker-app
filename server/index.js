@@ -161,6 +161,55 @@ app.delete("/applications/:id", async (req, res) => {
   }
 });
 
+// 5. UPDATE - Modify an existing application by ID
+app.put("/applications/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { 
+        company, position, status, applied_date, work_type, location, 
+        salary_min, salary_max, currency, link, description, 
+        recruiter_name, recruiter_email, notes 
+      } = req.body;
+  
+      // Helpers to clean data (same as POST)
+      const cleanInt = (val) => (val === '' || val === null ? null : parseInt(val));
+      const cleanStr = (val) => (val === '' ? null : val);
+  
+      // SQL Update Query
+      const query = `
+        UPDATE applications SET 
+          company = $1, position = $2, status = $3, applied_date = $4, 
+          work_type = $5, location = $6, salary_min = $7, salary_max = $8, 
+          currency = $9, link = $10, description = $11, 
+          recruiter_name = $12, recruiter_email = $13, notes = $14
+        WHERE id = $15
+        RETURNING *
+      `;
+  
+      const values = [
+        company, position, status, applied_date, 
+        cleanStr(work_type), cleanStr(location), 
+        cleanInt(salary_min), cleanInt(salary_max), currency, 
+        cleanStr(link), cleanStr(description), 
+        cleanStr(recruiter_name), cleanStr(recruiter_email), cleanStr(notes), 
+        id
+      ];
+  
+      const updateOp = await pool.query(query, values);
+      
+      if (updateOp.rowCount === 0) {
+         return res.status(404).json({ message: "Application not found" });
+      }
+  
+      res.json(updateOp.rows[0]);
+      console.log(`📝 Updated Application ID: ${id}`);
+  
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send("Server Error");
+    }
+  });
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on ${PORT}`);
 });
