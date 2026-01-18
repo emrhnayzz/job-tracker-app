@@ -4,5 +4,26 @@
 
 /* Global Styles */
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-gray-50 text-gray-900 transition-colors duration-300;
+}
+
+/* Dark Mode Global Styles */
+.dark body {
+  @apply bg-gray-900 text-gray-100;
+}
+
+/* Animations */
+.animation-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
