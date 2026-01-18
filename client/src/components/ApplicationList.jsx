@@ -10,6 +10,7 @@ import {
   FaFilter,
 } from "react-icons/fa";
 import DashboardStats from "./DashboardStats"; // Import the stats component
+import toast from "react-hot-toast";
 
 const ApplicationList = () => {
   const [applications, setApplications] = useState([]);
@@ -42,14 +43,14 @@ const ApplicationList = () => {
 
     try {
       await axios.delete(`http://localhost:5001/applications/${id}`);
-      // Optimistic UI update: Remove item from state immediately
       setApplications(applications.filter((app) => app.id !== id));
+
+      toast.success("Application deleted successfully! 🗑️");
     } catch (err) {
       console.error("Error deleting application:", err);
-      alert("Failed to delete. Check console for details.");
+      toast.error("Failed to delete application.");
     }
   };
-
   // 3. Filter Logic (Search + Dropdown)
   const filteredApplications = applications.filter((app) => {
     // Search by Company or Position (Case insensitive)

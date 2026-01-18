@@ -2,10 +2,12 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import ApplicationList from "./components/ApplicationList";
 import AddApplication from "./components/AddApplication";
 import EditApplication from "./components/EditApplication";
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <Router>
+      <Toaster position="top-right" reverseOrder={false} />
       <div className="min-h-screen bg-gray-50">
         
         {/* --- GLOBAL NAVIGATION --- */}

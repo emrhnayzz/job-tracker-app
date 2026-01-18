@@ -1,13 +1,14 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast"; // <--- Import eklendi
 
 const AddApplication = () => {
   const navigate = useNavigate();
 
+  // Helper to get today's date in 'YYYY-MM-DD' format
   const getTodayString = () => new Date().toISOString().split("T")[0];
 
-  // Form State: Matches the Database Schema
   const [formData, setFormData] = useState({
     company: "",
     position: "",
@@ -26,30 +27,26 @@ const AddApplication = () => {
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  // Handle changes for all input fields
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle Form Submission
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent page reload
+    e.preventDefault();
     setLoading(true);
-    setError(null);
 
     try {
-      // Send POST request to the backend
-
       await axios.post("http://localhost:5001/applications", formData);
-      console.log("✅ Application added successfully!");
 
-      // Redirect back to the Dashboard (Home)
+      // --- SUCCESS TOAST ---
+      toast.success("Application added successfully! 🚀");
+
       navigate("/");
     } catch (err) {
       console.error("Error adding application:", err);
-      setError("Failed to save application. Please try again.");
+      // --- ERROR TOAST ---
+      toast.error("Failed to save application.");
     } finally {
       setLoading(false);
     }
@@ -60,11 +57,6 @@ const AddApplication = () => {
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Add New Application
       </h2>
-
-      {/* Error Message Display */}
-      {error && (
-        <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* --- SECTION 1: ESSENTIAL INFO --- */}
@@ -101,7 +93,6 @@ const AddApplication = () => {
 
         {/* --- SECTION 2: STATUS, DATE & TYPE --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Date Picker Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Applied Date
@@ -114,7 +105,6 @@ const AddApplication = () => {
               onChange={handleChange}
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
@@ -131,7 +121,6 @@ const AddApplication = () => {
               <option value="Rejected">Rejected</option>
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Work Type
@@ -166,7 +155,6 @@ const AddApplication = () => {
           </div>
         </div>
 
-        {/* Salary Group */}
         <div className="grid grid-cols-3 gap-6 bg-gray-50 p-4 rounded-lg">
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -225,7 +213,6 @@ const AddApplication = () => {
             onChange={handleChange}
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Personal Notes / Recruiter Info
