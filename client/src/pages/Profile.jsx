@@ -51,7 +51,7 @@ const Profile = () => {
 
     try {
       const res = await axios.put(
-        `http://localhost:5001/users/${userId}`,
+        `(import.meta.env.VITE_API_URL || "http://localhost:5001")/users/${userId}`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

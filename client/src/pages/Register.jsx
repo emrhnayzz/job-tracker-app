@@ -15,7 +15,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5001/auth/register", formData);
+      await axios.post("/http://localhost:5001auth/register", formData);
       toast.success("Account created successfully! 🎉 Please login.");
       navigate("/login");
     } catch (err) {
