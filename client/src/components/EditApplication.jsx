@@ -82,7 +82,7 @@ const EditApplication = () => {
   if (loading) return <div className="text-center mt-10">Loading...</div>;
 
   return (
-    <div className="bg-white dark:bg-gray-800 dark:text-white p-6 rounded-lg w-full max-w-2xl shadow-xl relative">
+    <div className="w-full p-3 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Edit Application
       </h2>
