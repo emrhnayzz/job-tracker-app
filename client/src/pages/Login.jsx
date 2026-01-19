@@ -12,7 +12,8 @@ const Login = () => {
     e.preventDefault();
     try {
       const res = await axios.post(
-        '(import.meta.env.VITE_API_URL || "http://localhost:5001")/auth/login',
+        (import.meta.env.VITE_API_URL || "http://localhost:5001") +
+          "/auth/login",
         formData
       );
 

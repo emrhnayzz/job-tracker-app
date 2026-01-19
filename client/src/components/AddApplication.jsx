@@ -49,12 +49,16 @@ const AddApplication = () => {
     try {
       const userName = localStorage.getItem("username");
 
-      const res = await axios.post("(import.meta.env.VITE_API_URL || "http://localhost:5001")/ai/generate", {
-        company: formData.company,
-        position: formData.position,
-        description: formData.description,
-        userName: userName,
-      });
+      const res = await axios.post(
+        (import.meta.env.VITE_API_URL || "http://localhost:5001") +
+          "/ai/generate",
+        {
+          company: formData.company,
+          position: formData.position,
+          description: formData.description,
+          userName: userName,
+        }
+      );
 
       const letter = res.data.letter;
 
@@ -88,9 +92,14 @@ const AddApplication = () => {
     if (userId) data.append("user_id", userId);
 
     try {
-      await axios.post("(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await axios.post(
+        (import.meta.env.VITE_API_URL || "http://localhost:5001") +
+          "/applications",
+        data,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       toast.success("Application added successfully! 🚀");
       navigate("/");
     } catch (err) {

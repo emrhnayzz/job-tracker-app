@@ -32,9 +32,13 @@ const ApplicationList = () => {
 
       if (!userId) return;
 
-      const res = await axios.get("(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications", {
-        params: { userId: userId },
-      });
+      const res = await axios.get(
+        (import.meta.env.VITE_API_URL || "http://localhost:5001") +
+          "/applications",
+        {
+          params: { userId: userId },
+        }
+      );
 
       setApplications(res.data);
       setLoading(false);
@@ -53,7 +57,9 @@ const ApplicationList = () => {
     if (!window.confirm("Are you sure you want to delete this application?"))
       return;
     try {
-      await axios.delete(`(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications/${id}`);
+      await axios.delete(
+        `(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications/${id}`
+      );
       setApplications(applications.filter((app) => app.id !== id));
       toast.success("Application deleted successfully! 🗑️");
     } catch (err) {
