@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useTheme } from "./context/ThemeContext";
 
@@ -12,13 +12,14 @@ import AddApplication from "./components/AddApplication";
 import EditApplication from "./components/EditApplication";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Profile from "./pages/Profile";
 
 function App() {
   const { theme } = useTheme();
 
   return (
     <Router>
-      {/* 1. Global Toast Configuration (Dark Mode Aware) */}
+      {/* 1. Global Toast Config */}
       <Toaster
         position="top-right"
         reverseOrder={false}
@@ -47,15 +48,25 @@ function App() {
               path="/"
               element={
                 <ProtectedRoute>
-                  {/* Header Section for Dashboard */}
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                      My Applications
-                    </h2>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Track and manage your job search process.
-                    </p>
+                  {/* Header Section with New App Button */}
+                  <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+                        My Applications
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-400 mt-1 text-lg">
+                        Track and manage your job search process.
+                      </p>
+                    </div>
+
+                    <Link
+                      to="/add"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl text-base font-semibold transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <span className="text-xl">+</span> New Application
+                    </Link>
                   </div>
+
                   <ApplicationList />
                 </ProtectedRoute>
               }
@@ -75,6 +86,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EditApplication />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

@@ -12,8 +12,11 @@ const Login = () => {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:5001/auth/login', formData);
+      
+      // Save Token and User Info to LocalStorage
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('username', res.data.user.username); 
+      localStorage.setItem('username', res.data.user.username);
+      localStorage.setItem('userId', res.data.user.id); // <-- CRITICAL: Save User ID for Profile page
       
       toast.success(`Welcome back, ${res.data.user.username}! 👋`);
       navigate('/'); 
@@ -38,7 +41,7 @@ const Login = () => {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
-        {/* MAIN CARD: Added dark mode classes */}
+        {/* MAIN CARD */}
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700 transition-colors duration-300">
           
           <div className="text-center mb-8">
@@ -72,7 +75,6 @@ const Login = () => {
               <input 
                 type="email" required 
                 placeholder="Enter your email"
-                // INPUT STYLES: Dark background, light text, dark border
                 className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
               />

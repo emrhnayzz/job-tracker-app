@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import axios from "axios";
 import {
   FaUserCircle,
   FaSignOutAlt,
@@ -8,17 +9,44 @@ import {
   FaSun,
   FaMoon,
 } from "react-icons/fa";
-import { useTheme } from "../context/ThemeContext"; // Import context
+import { useTheme } from "../context/ThemeContext";
 
 const Navbar = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const { theme, toggleTheme } = useTheme();
-  const username = localStorage.getItem("username") || "User";
+  // State to store fetched user data (avatar etc.)
+  const [currentUser, setCurrentUser] = useState(null);
 
-  // Close menu when clicking outside
+  const { theme, toggleTheme } = useTheme();
+
+  // Get basics from LocalStorage
+  const storedUsername = localStorage.getItem("username");
+  const userId = localStorage.getItem("userId");
+
+  // Fetch fresh user data (avatar) on mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (userId) {
+        try {
+          const res = await axios.get(`http://localhost:5001/users/${userId}`);
+          setCurrentUser(res.data);
+        } catch (error) {
+          console.error("Failed to fetch user info for navbar");
+        }
+      }
+    };
+    fetchUserData();
+  }, [userId]);
+
+  // Use fetched username or fallback to localStorage
+  const displayUsername = currentUser?.username || storedUsername || "User";
+  // Check if avatar exists
+  const avatarUrl = currentUser?.avatar_path
+    ? `http://localhost:5001/${currentUser.avatar_path}`
+    : null;
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -30,12 +58,10 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
+    localStorage.clear();
     window.location.href = "/login";
   };
 
-  // Hide Navbar on Login/Register pages
   if (location.pathname === "/login" || location.pathname === "/register")
     return null;
 
@@ -43,7 +69,6 @@ const Navbar = () => {
     <nav className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-20 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          {/* Logo */}
           <Link
             to="/"
             className="flex items-center gap-2 text-decoration-none group"
@@ -56,25 +81,26 @@ const Navbar = () => {
             </h1>
           </Link>
 
-          {/* Right Side Actions */}
           <div className="flex items-center gap-6">
-            <Link
-              to="/add"
-              className="hidden md:block bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg"
-            >
-              + New Application
-            </Link>
-
-            {/* User Dropdown */}
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="flex items-center gap-2 focus:outline-none hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 focus:outline-none hover:bg-gray-50 dark:hover:bg-gray-700 p-1.5 pr-3 rounded-full border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-all"
               >
-                <span className="text-gray-700 dark:text-gray-200 font-medium hidden sm:block">
-                  {username}
+                {/* AVATAR DISPLAY LOGIC */}
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar"
+                    className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                  />
+                ) : (
+                  <FaUserCircle className="text-3xl text-gray-400 dark:text-gray-300" />
+                )}
+
+                <span className="text-gray-700 dark:text-gray-200 font-medium hidden sm:block text-sm">
+                  {displayUsername}
                 </span>
-                <FaUserCircle className="text-3xl text-gray-400 dark:text-gray-300" />
               </button>
 
               {isMenuOpen && (
@@ -84,16 +110,17 @@ const Navbar = () => {
                       Signed in as
                     </p>
                     <p className="text-sm font-bold text-gray-800 dark:text-white truncate">
-                      {username}
+                      {displayUsername}
                     </p>
                   </div>
 
-                  <a
-                    href="#"
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMenuOpen(false)}
                     className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
                   >
                     <FaUser className="text-gray-400" /> Profile
-                  </a>
+                  </Link>
 
                   <button
                     onClick={toggleTheme}
@@ -106,13 +133,6 @@ const Navbar = () => {
                     )}
                     {theme === "dark" ? "Light Mode" : "Dark Mode"}
                   </button>
-
-                  <a
-                    href="#"
-                    className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
-                  >
-                    <FaCog className="text-gray-400" /> Settings
-                  </a>
 
                   <button
                     onClick={handleLogout}
