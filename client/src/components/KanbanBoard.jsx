@@ -165,7 +165,10 @@ const KanbanBoard = ({ applications, setApplications }) => {
         notes: app.notes,
       };
 
-      await axios.put(`http://localhost:5001/applications/${appId}`, payload);
+      await axios.put(
+        `(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications/${appId}`,
+        payload
+      );
       toast.success(`Moved to ${newStatus} 🎉`);
     } catch (err) {
       console.error("Update failed", err);

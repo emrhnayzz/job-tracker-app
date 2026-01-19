@@ -22,10 +22,14 @@ const Profile = () => {
 
   const fetchUser = async () => {
     try {
-      const res = await axios.get(`http://localhost:5001/users/${userId}`);
+      const res = await axios.get(
+        `(import.meta.env.VITE_API_URL || "http://localhost:5001")/users/${userId}`
+      );
       setUser(res.data);
       if (res.data.avatar_path) {
-        setPreview(`http://localhost:5001/${res.data.avatar_path}`);
+        setPreview(
+          `(import.meta.env.VITE_API_URL || "http://localhost:5001")/${res.data.avatar_path}`
+        );
       }
     } catch (err) {
       toast.error("Failed to load profile");
@@ -51,7 +55,7 @@ const Profile = () => {
 
     try {
       const res = await axios.put(
-        `(import.meta.env.VITE_API_URL || "http://localhost:5001")/users/${userId}`,
+        `(import.meta.env.VITE_API_URL || "(import.meta.env.VITE_API_URL || "http://localhost:5001")")/users/${userId}`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

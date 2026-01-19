@@ -29,7 +29,9 @@ const EditApplication = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(`http://localhost:5001/applications`);
+        const res = await axios.get(
+          `(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications`
+        );
         const app = res.data.find((item) => item.id === parseInt(id));
 
         if (app) {
@@ -57,7 +59,10 @@ const EditApplication = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`http://localhost:5001/applications/${id}`, formData);
+      await axios.put(
+        `(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications/${id}`,
+        formData
+      );
 
       // --- SUCCESS TOAST ---
       toast.success("Application updated successfully! 💾");

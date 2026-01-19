@@ -32,7 +32,7 @@ const ApplicationList = () => {
 
       if (!userId) return;
 
-      const res = await axios.get("http://localhost:5001/applications", {
+      const res = await axios.get("(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications", {
         params: { userId: userId },
       });
 
@@ -53,7 +53,7 @@ const ApplicationList = () => {
     if (!window.confirm("Are you sure you want to delete this application?"))
       return;
     try {
-      await axios.delete(`http://localhost:5001/applications/${id}`);
+      await axios.delete(`(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications/${id}`);
       setApplications(applications.filter((app) => app.id !== id));
       toast.success("Application deleted successfully! 🗑️");
     } catch (err) {
@@ -206,7 +206,7 @@ const ApplicationList = () => {
                   )}
                   {app.cv_path && (
                     <a
-                      href={`http://localhost:5001/${app.cv_path}`}
+                      href={`(import.meta.env.VITE_API_URL || "http://localhost:5001")/${app.cv_path}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 flex items-center gap-1 text-sm"

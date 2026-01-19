@@ -30,7 +30,9 @@ const Navbar = () => {
     const fetchUserData = async () => {
       if (userId) {
         try {
-          const res = await axios.get(`http://localhost:5001/users/${userId}`);
+          const res = await axios.get(
+            `(import.meta.env.VITE_API_URL || "http://localhost:5001")/users/${userId}`
+          );
           setCurrentUser(res.data);
         } catch (error) {
           console.error("Failed to fetch user info for navbar");
@@ -44,7 +46,7 @@ const Navbar = () => {
   const displayUsername = currentUser?.username || storedUsername || "User";
   // Check if avatar exists
   const avatarUrl = currentUser?.avatar_path
-    ? `http://localhost:5001/${currentUser.avatar_path}`
+    ? `(import.meta.env.VITE_API_URL || "http://localhost:5001")/${currentUser.avatar_path}`
     : null;
 
   useEffect(() => {
