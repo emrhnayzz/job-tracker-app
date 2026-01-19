@@ -54,12 +54,9 @@ const Profile = () => {
     if (avatarFile) formData.append("avatar", avatarFile);
 
     try {
-      const res = await axios.put(
-        `(import.meta.env.VITE_API_URL || "(import.meta.env.VITE_API_URL || "http://localhost:5001")")/users/${userId}`,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+      const res = await axios.get(
+        (import.meta.env.VITE_API_URL || "http://localhost:5001") +
+          `/users/${storedUserId}`
       );
 
       // Update local storage and state

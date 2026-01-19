@@ -60,8 +60,12 @@ const EditApplication = () => {
     e.preventDefault();
     try {
       await axios.put(
-        `(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications/${id}`,
-        formData
+        (import.meta.env.VITE_API_URL || "http://localhost:5001") +
+          `/applications/${app.id}`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
 
       // --- SUCCESS TOAST ---
@@ -78,13 +82,12 @@ const EditApplication = () => {
   if (loading) return <div className="text-center mt-10">Loading...</div>;
 
   return (
-    <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-md border border-gray-100 mt-10">
+    <div className="bg-white dark:bg-gray-800 dark:text-white p-6 rounded-lg w-full max-w-2xl shadow-xl relative">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Edit Application
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* --- Form Alanları (AddApplication ile aynı) --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

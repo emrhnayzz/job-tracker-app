@@ -31,7 +31,7 @@ const KanbanCard = ({ app }) => {
       {...listeners}
       {...attributes}
       className={`
-        touch-none select-none  // Seçimi ve kaydırmayı engelle
+        touch-none select-none  
         bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 mb-3 cursor-grab hover:shadow-md transition-shadow
         ${
           isDragging
@@ -166,8 +166,9 @@ const KanbanBoard = ({ applications, setApplications }) => {
       };
 
       await axios.put(
-        `(import.meta.env.VITE_API_URL || "http://localhost:5001")/applications/${appId}`,
-        payload
+        (import.meta.env.VITE_API_URL || "http://localhost:5001") +
+          `/applications/${draggableId}`,
+        { status: destination.droppableId }
       );
       toast.success(`Moved to ${newStatus} 🎉`);
     } catch (err) {
