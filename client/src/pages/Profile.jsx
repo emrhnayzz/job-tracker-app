@@ -41,7 +41,7 @@ const Profile = () => {
         }
       } catch (err) {
         console.error(err);
-        toast.error("Profil yüklenemedi.");
+        toast.error("Profile couln`t loaded");
       } finally {
         setLoading(false);
       }
@@ -81,12 +81,12 @@ const Profile = () => {
         }
       );
 
-      toast.success("Profil güncellendi! 🚀");
+      toast.success("Profile is updated! 🚀");
       setUser(res.data);
       setPasswords({ currentPassword: "", newPassword: "" });
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Güncelleme başarısız.");
+      toast.error(err.response?.data?.message || "Update unseccessful");
     }
   };
 
