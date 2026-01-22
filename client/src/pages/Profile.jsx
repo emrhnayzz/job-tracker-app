@@ -22,7 +22,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchUser = async () => {
       if (!storedUserId || !token) {
-        toast.error("Lütfen giriş yapın.");
+        toast.error("Please log in.");
         navigate("/login");
         return;
       }
@@ -41,7 +41,7 @@ const Profile = () => {
         }
       } catch (err) {
         console.error(err);
-        toast.error("Profile couln`t loaded");
+        toast.error("Failed to load profile");
       } finally {
         setLoading(false);
       }
@@ -81,23 +81,23 @@ const Profile = () => {
         }
       );
 
-      toast.success("Profile is updated! 🚀");
+      toast.success("Profile updated successfully! 🚀");
       setUser(res.data);
       setPasswords({ currentPassword: "", newPassword: "" });
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Update unseccessful");
+      toast.error(err.response?.data?.message || "Update failed");
     }
   };
 
   if (loading)
-    return <div className="text-center mt-10 text-white">Yükleniyor...</div>;
+    return <div className="text-center mt-10 text-white">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4">
       <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md border border-gray-700">
         <h2 className="text-2xl font-bold text-white mb-6 text-center">
-          Profil Ayarları
+          Profile Settings
         </h2>
 
         <form onSubmit={handleUpdate} className="space-y-6">
@@ -122,13 +122,11 @@ const Profile = () => {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
             </div>
-            <p className="text-gray-400 text-sm">
-              Resmi değiştirmek için tıklayın
-            </p>
+            <p className="text-gray-400 text-sm">Click to change avatar</p>
           </div>
 
           <div>
-            <label className="text-gray-400 text-sm">Kullanıcı Adı</label>
+            <label className="text-gray-400 text-sm">Username</label>
             <input
               type="text"
               value={user.username || ""}
@@ -137,7 +135,7 @@ const Profile = () => {
             />
           </div>
           <div>
-            <label className="text-gray-400 text-sm">E-posta</label>
+            <label className="text-gray-400 text-sm">Email</label>
             <input
               type="email"
               value={user.email || ""}
@@ -147,11 +145,11 @@ const Profile = () => {
           </div>
 
           <div className="pt-4 border-t border-gray-700">
-            <h3 className="text-white text-md mb-2">Şifre Değiştir</h3>
+            <h3 className="text-white text-md mb-2">Change Password</h3>
             <div className="space-y-3">
               <input
                 type="password"
-                placeholder="Mevcut Şifre"
+                placeholder="Current Password"
                 value={passwords.currentPassword}
                 onChange={(e) =>
                   setPasswords({
@@ -163,7 +161,7 @@ const Profile = () => {
               />
               <input
                 type="password"
-                placeholder="Yeni Şifre"
+                placeholder="New Password"
                 value={passwords.newPassword}
                 onChange={(e) =>
                   setPasswords({ ...passwords, newPassword: e.target.value })
@@ -177,7 +175,7 @@ const Profile = () => {
             type="submit"
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded transition duration-300 shadow-lg"
           >
-            💾 Kaydet
+            💾 Save Changes
           </button>
         </form>
       </div>
