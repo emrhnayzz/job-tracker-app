@@ -37,18 +37,27 @@ const EditApplication = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        // 2. Gelen veri dizi mi kontrol et
-        const apps = Array.isArray(res.data) ? res.data : (res.data.data || []);
+        // 2. Response formatini logla (deploy ortaminda format farkli olabilir)
+        console.log("API RESPONSE:", res.data);
 
-        if (!Array.isArray(apps)) {
-            console.error("Hata: Gelen veri dizi değil:", res.data);
-            toast.error("Veri formatı hatalı.");
-            setLoading(false);
-            return;
+        // 3. Gelen veri hangi formatta gelirse gelsin uygulamalari diziye indirgeme
+        const raw = res.data;
+        const apps =
+          Array.isArray(raw) ? raw :
+          Array.isArray(raw?.data) ? raw.data :
+          Array.isArray(raw?.applications) ? raw.applications :
+          Array.isArray(raw?.data?.applications) ? raw.data.applications :
+          [];
+
+        if (!Array.isArray(apps) || apps.length === 0) {
+          console.error("Hata: Uygulama listesi bulunamadi veya bos:", res.data);
+          toast.error("Basvuru listesi yuklenemedi.");
+          setLoading(false);
+          return;
         }
 
         // 3. Dizinin içinde bizim ID'yi bul
-        const app = apps.find(item => item.id == id || item._id == id);
+        const app = apps.find((item) => String(item.id ?? item._id) === String(id));
 
         if (app) {
           console.log("Başvuru bulundu:", app);
@@ -66,8 +75,9 @@ const EditApplication = () => {
             notes: app.notes || "",
           });
         } else {
-            console.warn("Bu ID ile başvuru bulunamadı:", id);
-            toast.error("Başvuru bulunamadı.");
+          console.warn("Bu ID ile başvuru bulunamadi:", id);
+          toast.error("Basvuru bulunamadi.");
+          setLoading(false);
         }
 
       } catch (err) {
