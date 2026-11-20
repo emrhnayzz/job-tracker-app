@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { BellRing, CalendarClock, Download, KanbanSquare, List, ListChecks, Plus, Search } from "lucide-react";
+import { BellRing, CalendarClock, Download, KanbanSquare, List, ListChecks, MailCheck, MessagesSquare, Plus, Search } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useApplications } from "../context/ApplicationsContext";
 import { useI18n } from "../i18n";
@@ -20,7 +20,7 @@ const Stat = ({ label, value, hint }) => (
   </div>
 );
 
-const ATTENTION_ICON = { interview: CalendarClock, followUp: BellRing, task: ListChecks };
+const ATTENTION_ICON = { interview: CalendarClock, followUp: BellRing, task: ListChecks, debrief: MessagesSquare };
 
 // What needs attention now: interviews this week, follow-ups and tasks that are due.
 const Attention = ({ applications }) => {
@@ -32,11 +32,15 @@ const Attention = ({ applications }) => {
       .filter(({ days }) => days >= 0 && days <= 7)
       .sort((a, b) => a.days - b.days)
       .map(({ app }) => ({ app, kind: "interview" }));
+    // An interview that is over: time to record how it went.
+    const debriefs = applications
+      .filter((app) => app.status === "Interview" && app.interview_date && new Date(app.interview_date) < new Date())
+      .map((app) => ({ app, kind: "debrief" }));
     const followUps = applications.filter(needsFollowUp).map((app) => ({ app, kind: "followUp" }));
     const tasks = applications
       .filter((app) => app.open_tasks > 0 && app.next_task_due && daysUntil(app.next_task_due) <= 0)
       .map((app) => ({ app, kind: "task" }));
-    return [...interviews, ...followUps, ...tasks].slice(0, 6);
+    return [...debriefs, ...interviews, ...followUps, ...tasks].slice(0, 6);
   }, [applications]);
 
   if (items.length === 0) return null;
@@ -83,7 +87,7 @@ const EmptyState = () => {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { applications, loading, setStatus, create } = useApplications();
+  const { applications, loading, setStatus, create, pendingMails } = useApplications();
   const i18n = useI18n();
   const { t } = i18n;
   const [query, setQuery] = useState("");
@@ -135,6 +139,18 @@ export default function Dashboard() {
             <Stat label={t("stat.offers")} value={stats.offers} />
             <Stat label={t("stat.responseRate")} value={stats.responseRate === null ? "–" : `${stats.responseRate} %`} />
           </section>
+
+          {pendingMails > 0 && (
+            <Link to="/app/inbox" className="card mb-6 flex items-center gap-3.5 border-accent/40 p-4 transition hover:border-accent">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
+                <MailCheck size={19} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{t("attention.mails", { count: pendingMails })}</span>
+                <span className="block text-xs text-muted">{t("attention.mailsHint")}</span>
+              </span>
+            </Link>
+          )}
 
           <Attention applications={applications} />
 

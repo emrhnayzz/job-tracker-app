@@ -30,4 +30,8 @@ module.exports = {
   clientOrigins,
   geminiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+  // Emails state times as people say them; they are read in this zone.
+  timeZone: process.env.APP_TIMEZONE || "Europe/Berlin",
+  // Domain of the personal forwarding addresses, e.g. inbox.example.com.
+  inboundDomain: process.env.INBOUND_DOMAIN || "",
 };

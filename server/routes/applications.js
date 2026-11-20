@@ -5,6 +5,7 @@ const { pool } = require("../config/db");
 const { requireAuth } = require("../middleware/auth");
 const { uploadCv, removeFile, CV_DIR } = require("../middleware/fileUpload");
 const { STATUSES, parseApplication, text, date } = require("../lib/applicationInput");
+const { appliedDateFor, followUpFor } = require("../lib/rules");
 
 const router = express.Router();
 router.use(requireAuth);
@@ -29,9 +30,6 @@ const addEvent = (applicationId, event) =>
     [applicationId, event.type, event.from ?? null, event.to ?? null, event.note ?? null]
   );
 
-// An application that leaves "Saved" has been sent: stamp the date if missing.
-const appliedDateFor = (status, appliedDate) =>
-  status !== "Saved" && !appliedDate ? new Date() : appliedDate;
 
 router.get("/", async (req, res) => {
   const list = await pool.query(
@@ -71,6 +69,7 @@ router.post("/", uploadCv, async (req, res) => {
     return res.status(400).json({ error });
   }
   values.applied_date = appliedDateFor(values.status, values.applied_date);
+  values.follow_up_date = followUpFor(values.status, null, values.follow_up_date);
 
   const created = await pool.query(
     `INSERT INTO applications (user_id, ${COLUMNS.join(", ")}, cv_path, cv_name)
@@ -97,6 +96,7 @@ router.put("/:id", uploadCv, async (req, res) => {
     return existing ? res.status(400).json({ error }) : res.status(404).json({ error: "not_found" });
   }
   values.applied_date = appliedDateFor(values.status, values.applied_date);
+  values.follow_up_date = followUpFor(values.status, existing.status, values.follow_up_date);
 
   const updated = await pool.query(
     `UPDATE applications
@@ -129,8 +129,14 @@ router.patch("/:id/status", async (req, res) => {
   if (status === existing.status) return res.json(existing);
 
   const updated = await pool.query(
-    "UPDATE applications SET status = $1, applied_date = $2, updated_at = NOW() WHERE id = $3 RETURNING *",
-    [status, appliedDateFor(status, existing.applied_date), existing.id]
+    `UPDATE applications SET status = $1, applied_date = $2, follow_up_date = $3, updated_at = NOW()
+     WHERE id = $4 RETURNING *`,
+    [
+      status,
+      appliedDateFor(status, existing.applied_date),
+      followUpFor(status, existing.status, existing.follow_up_date),
+      existing.id,
+    ]
   );
   await addEvent(existing.id, { type: "status", from: existing.status, to: status });
   res.json(updated.rows[0]);
@@ -162,8 +168,16 @@ router.post("/:id/tasks", async (req, res) => {
     .slice(0, 10);
   if (titles.length === 0) return res.status(400).json({ error: "title_required" });
 
+  // A task that is already on the list is not added a second time.
+  const present = await pool.query("SELECT LOWER(title) AS title FROM application_tasks WHERE application_id = $1", [
+    existing.id,
+  ]);
+  const known = new Set(present.rows.map((row) => row.title));
+
   const created = [];
   for (const title of titles) {
+    if (known.has(title.toLowerCase())) continue;
+    known.add(title.toLowerCase());
     const row = await pool.query(
       "INSERT INTO application_tasks (application_id, title, due_date) VALUES ($1, $2, $3) RETURNING *",
       [existing.id, title, date(req.body.due_date)]

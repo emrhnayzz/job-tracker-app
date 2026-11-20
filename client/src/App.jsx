@@ -8,6 +8,7 @@ import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import ApplicationForm from "./pages/ApplicationForm";
 import ApplicationDetail from "./pages/ApplicationDetail";
+import Inbox from "./pages/Inbox";
 import Insights from "./pages/Insights";
 import Profile from "./pages/Profile";
 
@@ -36,8 +37,9 @@ const PublicOnly = () => {
   const { user } = useAuth();
   const { search } = useLocation();
   if (user === undefined) return <Splash />;
-  // A shared link like /?demo=1&view=insights lands on that page after sign-in.
-  const target = new URLSearchParams(search).get("view") === "insights" ? "/app/insights" : "/app";
+  // A shared link like /?demo=1&view=inbox lands on that page after sign-in.
+  const view = new URLSearchParams(search).get("view");
+  const target = view === "insights" || view === "inbox" ? `/app/${view}` : "/app";
   return user ? <Navigate to={target} replace /> : <Outlet />;
 };
 
@@ -66,6 +68,7 @@ export default function App() {
           <Route path="new" element={<ApplicationForm />} />
           <Route path="a/:id" element={<ApplicationDetail />} />
           <Route path="a/:id/edit" element={<ApplicationForm />} />
+          <Route path="inbox" element={<Inbox />} />
           <Route path="insights" element={<Insights />} />
           <Route path="profile" element={<Profile />} />
         </Route>

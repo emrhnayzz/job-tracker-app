@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { BarChart3, KanbanSquare, LogOut, Plus, UserRound } from "lucide-react";
+import { BarChart3, Inbox, KanbanSquare, LogOut, Plus, UserRound } from "lucide-react";
+import { useApplications } from "../context/ApplicationsContext";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../i18n";
 import { fileUrl } from "../lib/api";
@@ -64,6 +65,7 @@ const navClass = ({ isActive }) =>
 
 export default function AppShell({ children }) {
   const { user, signOut } = useAuth();
+  const { pendingMails } = useApplications();
   const { t } = useI18n();
   const navigate = useNavigate();
 
@@ -90,6 +92,17 @@ export default function AppShell({ children }) {
           <nav className="ml-2 flex items-center gap-1 sm:ml-6">
             <NavLink to="/app" end className={navClass}>
               <KanbanSquare size={17} /> <span className="hidden md:inline">{t("nav.board")}</span>
+            </NavLink>
+            <NavLink to="/app/inbox" className={navClass}>
+              <span className="relative">
+                <Inbox size={17} />
+                {pendingMails > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-accent-ink">
+                    {pendingMails}
+                  </span>
+                )}
+              </span>
+              <span className="hidden md:inline">{t("nav.inbox")}</span>
             </NavLink>
             <NavLink to="/app/insights" className={navClass}>
               <BarChart3 size={17} /> <span className="hidden md:inline">{t("nav.insights")}</span>

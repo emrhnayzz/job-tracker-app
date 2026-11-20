@@ -254,6 +254,138 @@ if (!process.env.TEST_DATABASE_URL) {
     assert.equal(res.body.fields.salary_max, 17);
   });
 
+  test("a pasted email proposes a status change that can be applied and undone", async () => {
+    const created = await request(app)
+      .post("/applications")
+      .set(as(alice))
+      .send({ company: "Mailhaus Systems", position: "Werkstudent Backend", status: "Applied" });
+    const id = created.body.id;
+
+    const pasted = await request(app)
+      .post("/inbox")
+      .set(as(alice))
+      .send({
+        sender: "HR <jobs@mailhaus-systems.example>",
+        subject: "Ihre Bewerbung als Werkstudent Backend",
+        text: "Vielen Dank für Ihre Bewerbung. Leider haben wir uns für andere Bewerber entschieden.",
+      });
+    assert.equal(pasted.status, 201);
+    assert.equal(pasted.body.kind, "rejection");
+    assert.equal(pasted.body.application_id, id);
+    assert.equal(pasted.body.proposed_status, "Rejected");
+    assert.equal(pasted.body.state, "pending", "nothing changes before the user agrees");
+    assert.equal((await request(app).get(`/applications/${id}`).set(as(alice))).body.status, "Applied");
+
+    const applied = await request(app).post(`/inbox/${pasted.body.id}/apply`).set(as(alice));
+    assert.equal(applied.body.state, "applied");
+    const after = await request(app).get(`/applications/${id}`).set(as(alice));
+    assert.equal(after.body.status, "Rejected");
+    const event = after.body.events.find((item) => item.to_status === "Rejected");
+    assert.equal(event.auto, true, "the timeline marks the change as automatic");
+    assert.equal(event.mail_kind, "rejection");
+
+    const undone = await request(app).post(`/inbox/${pasted.body.id}/undo`).set(as(alice));
+    assert.equal(undone.body.state, "pending");
+    const restored = await request(app).get(`/applications/${id}`).set(as(alice));
+    assert.equal(restored.body.status, "Applied");
+    assert.equal(restored.body.events.some((item) => item.to_status === "Rejected"), false);
+  });
+
+  test("an invitation sets the interview date, and inbox entries are private", async () => {
+    const created = await request(app)
+      .post("/applications")
+      .set(as(alice))
+      .send({ company: "Terminwerk Labs", position: "Werkstudent", status: "Applied" });
+
+    const pasted = await request(app)
+      .post("/inbox")
+      .set(as(alice))
+      .send({
+        sender: "talent@terminwerk.example",
+        subject: "Einladung zum Vorstellungsgespräch",
+        text: "Wir möchten Sie gern kennenlernen und laden Sie zu einem Gespräch am 14.07.2031 um 11:00 Uhr ein.",
+      });
+    assert.equal(pasted.body.kind, "interview");
+    assert.equal(pasted.body.application_id, created.body.id);
+
+    // Bob can neither see nor apply Alice's message.
+    assert.equal((await request(app).get("/inbox").set(as(bob))).body.length, 0);
+    assert.equal((await request(app).post(`/inbox/${pasted.body.id}/apply`).set(as(bob))).status, 404);
+    assert.equal((await request(app).delete(`/inbox/${pasted.body.id}`).set(as(bob))).status, 404);
+
+    await request(app).post(`/inbox/${pasted.body.id}/apply`).set(as(alice));
+    const after = await request(app).get(`/applications/${created.body.id}`).set(as(alice));
+    assert.equal(after.body.status, "Interview");
+    assert.equal(after.body.interview_date, "2031-07-14T09:00:00.000Z", "11:00 in Berlin, stored as an instant");
+  });
+
+  test("unrelated mail is kept as unknown and can be dismissed", async () => {
+    const pasted = await request(app)
+      .post("/inbox")
+      .set(as(alice))
+      .send({ subject: "Newsletter", text: "Neue Angebote in unserem Shop. Jetzt entdecken und sparen!" });
+    assert.equal(pasted.body.kind, "unknown");
+    assert.equal(pasted.body.application_id, null);
+    assert.equal((await request(app).post(`/inbox/${pasted.body.id}/apply`).set(as(alice))).status, 400);
+    const dismissed = await request(app).post(`/inbox/${pasted.body.id}/dismiss`).set(as(alice));
+    assert.equal(dismissed.body.state, "dismissed");
+  });
+
+  test("forwarded mail arrives through the personal address and can apply itself", async () => {
+    const dana = await register("dana");
+    const token = (await pool.query("SELECT inbox_token FROM users WHERE id = $1", [dana.user.id])).rows[0].inbox_token;
+    assert.ok(token && token.length >= 20);
+
+    const created = await request(app)
+      .post("/applications")
+      .set(as(dana))
+      .send({ company: "Weiterleiter Digital", position: "Werkstudent", status: "Applied" });
+    const mail = {
+      From: "Recruiting <hr@weiterleiter.example>",
+      Subject: "Ihre Bewerbung",
+      TextBody: "Leider müssen wir Ihnen absagen, da wir uns für andere Kandidaten entschieden haben.",
+    };
+
+    // By default a forwarded mail only becomes a proposal.
+    assert.equal((await request(app).post(`/inbound/${token}`).send(mail)).status, 200);
+    let inbox = await request(app).get("/inbox").set(as(dana));
+    assert.equal(inbox.body.length, 1);
+    assert.equal(inbox.body[0].state, "pending");
+    assert.equal(inbox.body[0].source, "forward");
+
+    // With the setting on, a clear email changes the status by itself.
+    assert.equal((await request(app).put("/me").set(as(dana)).send({ auto_apply: true })).body.auto_apply, true);
+    await request(app).post(`/inbound/${token}`).send(mail);
+    const after = await request(app).get(`/applications/${created.body.id}`).set(as(dana));
+    assert.equal(after.body.status, "Rejected");
+
+    // A wrong token gets the same answer and stores nothing.
+    assert.equal((await request(app).post("/inbound/not-a-real-token").send(mail)).status, 200);
+    inbox = await request(app).get("/inbox").set(as(dana));
+    assert.equal(inbox.body.length, 2);
+  });
+
+  test("applying plans a follow-up, and suggested tasks are not duplicated", async () => {
+    const saved = await request(app).post("/applications").set(as(alice)).send({ company: "Regelwerk", position: "Dev", status: "Saved" });
+    assert.equal(saved.body.follow_up_date, null);
+
+    const moved = await request(app).patch(`/applications/${saved.body.id}/status`).set(as(alice)).send({ status: "Applied" });
+    assert.ok(moved.body.follow_up_date, "a follow-up is planned automatically");
+
+    await request(app).post(`/applications/${saved.body.id}/tasks`).set(as(alice)).send({ titles: ["Nachfassen", "Lebenslauf prüfen"] });
+    const again = await request(app).post(`/applications/${saved.body.id}/tasks`).set(as(alice)).send({ titles: ["nachfassen", "Neu"] });
+    assert.deepEqual(again.body.map((task) => task.title), ["Neu"]);
+  });
+
+  test("the demo inbox holds emails that are already understood", async () => {
+    const demo = await request(app).post("/auth/demo").send({ lang: "de" });
+    const inbox = await request(app).get("/inbox").set("Authorization", `Bearer ${demo.body.token}`);
+    assert.equal(inbox.body.length, 3);
+    assert.deepEqual(inbox.body.map((mail) => mail.kind).sort(), ["confirmation", "interview", "rejection"]);
+    assert.ok(inbox.body.every((mail) => mail.application_id && mail.state === "pending"));
+    assert.ok(inbox.body.find((mail) => mail.kind === "interview").interview_date);
+  });
+
   test("deleting the account removes its data", async () => {
     const carol = await register("carol");
     await request(app).post("/applications").set(as(carol)).send({ company: "Gone", position: "x" });

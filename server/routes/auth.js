@@ -3,11 +3,13 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const { pool } = require("../config/db");
 const { signToken } = require("../middleware/auth");
-const { seedDemoApplications, DEMO_SKILLS } = require("../lib/demoData");
+const env = require("../config/env");
+const { seedDemoApplications, seedDemoInbox, DEMO_SKILLS } = require("../lib/demoData");
 
 const router = express.Router();
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const newInboxToken = () => crypto.randomBytes(12).toString("hex");
 const publicUser = (row) => ({
   id: row.id,
   username: row.username,
@@ -16,6 +18,10 @@ const publicUser = (row) => ({
   bio: row.bio,
   skills: row.skills,
   weekly_goal: row.weekly_goal,
+  auto_apply: row.auto_apply,
+  auto_tasks: row.auto_tasks,
+  // The personal forwarding address exists only when a mail domain is set up.
+  inbox_address: env.inboundDomain && row.inbox_token ? `${row.inbox_token}@${env.inboundDomain}` : null,
   is_demo: row.is_demo,
   created_at: row.created_at,
 });
@@ -34,8 +40,8 @@ router.post("/register", async (req, res) => {
 
   const hash = await bcrypt.hash(password, 10);
   const created = await pool.query(
-    "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING *",
-    [username, email, hash]
+    "INSERT INTO users (username, email, password_hash, inbox_token) VALUES ($1, $2, $3, $4) RETURNING *",
+    [username, email, hash, newInboxToken()]
   );
 
   const user = created.rows[0];
@@ -72,8 +78,8 @@ router.post("/demo", async (req, res) => {
     await client.query("DELETE FROM users WHERE is_demo AND created_at < NOW() - INTERVAL '1 day'");
 
     const created = await client.query(
-      `INSERT INTO users (username, email, password_hash, is_demo, bio, skills)
-       VALUES ($1, $2, '!', TRUE, $3, $4) RETURNING *`,
+      `INSERT INTO users (username, email, password_hash, is_demo, bio, skills, inbox_token)
+       VALUES ($1, $2, '!', TRUE, $3, $4, $5) RETURNING *`,
       [
         `demo-${suffix}`,
         `demo-${suffix}@demo.invalid`,
@@ -81,10 +87,12 @@ router.post("/demo", async (req, res) => {
           ? "Wirtschaftsinformatik-Student mit vier eigenen Apps im App Store. Erfahrung mit React Native, Swift und Supabase."
           : "Business informatics student with four apps of my own on the App Store. Experience with React Native, Swift and Supabase.",
         DEMO_SKILLS,
+        newInboxToken(),
       ]
     );
     const user = created.rows[0];
     await seedDemoApplications(client, user.id, lang);
+    await seedDemoInbox(client, user, lang);
     await client.query("COMMIT");
 
     res.status(201).json({ token: signToken(user.id), user: publicUser(user) });
@@ -96,4 +104,4 @@ router.post("/demo", async (req, res) => {
   }
 });
 
-module.exports = { router, publicUser, EMAIL_PATTERN };
+module.exports = { router, publicUser, EMAIL_PATTERN, newInboxToken };

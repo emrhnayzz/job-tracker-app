@@ -4,7 +4,7 @@ const path = require("path");
 const { pool } = require("../config/db");
 const { requireAuth } = require("../middleware/auth");
 const { uploadAvatar, removeFile, CV_DIR, AVATAR_DIR } = require("../middleware/fileUpload");
-const { publicUser, EMAIL_PATTERN } = require("./auth");
+const { publicUser, EMAIL_PATTERN, newInboxToken } = require("./auth");
 
 const router = express.Router();
 router.use(requireAuth);
@@ -12,8 +12,13 @@ router.use(requireAuth);
 const loadUser = async (id) => (await pool.query("SELECT * FROM users WHERE id = $1", [id])).rows[0];
 
 router.get("/", async (req, res) => {
-  const user = await loadUser(req.userId);
+  let user = await loadUser(req.userId);
   if (!user) return res.status(401).json({ error: "invalid_token" });
+  // Accounts from before the inbox feature get their token on first use.
+  if (!user.inbox_token) {
+    await pool.query("UPDATE users SET inbox_token = $1 WHERE id = $2 AND inbox_token IS NULL", [newInboxToken(), user.id]);
+    user = await loadUser(req.userId);
+  }
   res.json(publicUser(user));
 });
 
@@ -27,6 +32,9 @@ router.put("/", uploadAvatar, async (req, res) => {
   const skills = req.body.skills === undefined ? user.skills : String(req.body.skills).trim().slice(0, 1000) || null;
   const goal = req.body.weekly_goal === undefined ? user.weekly_goal : Number.parseInt(req.body.weekly_goal, 10);
   if (!Number.isInteger(goal) || goal < 1 || goal > 50) return res.status(400).json({ error: "invalid_goal" });
+  const flag = (value, current) => (value === undefined ? current : value === true || value === "true");
+  const autoApply = flag(req.body.auto_apply, user.auto_apply);
+  const autoTasks = flag(req.body.auto_tasks, user.auto_tasks);
 
   if (username.length < 2 || username.length > 50) return res.status(400).json({ error: "invalid_username" });
   if (!user.is_demo && !EMAIL_PATTERN.test(email)) return res.status(400).json({ error: "invalid_email" });
@@ -49,9 +57,9 @@ router.put("/", uploadAvatar, async (req, res) => {
   const avatarPath = req.file ? `uploads/avatars/${req.file.filename}` : user.avatar_path;
   const updated = await pool.query(
     `UPDATE users SET username = $1, email = $2, bio = $3, password_hash = $4, avatar_path = $5,
-                      skills = $6, weekly_goal = $7
-     WHERE id = $8 RETURNING *`,
-    [username, user.is_demo ? user.email : email, bio, passwordHash, avatarPath, skills, goal, user.id]
+                      skills = $6, weekly_goal = $7, auto_apply = $8, auto_tasks = $9
+     WHERE id = $10 RETURNING *`,
+    [username, user.is_demo ? user.email : email, bio, passwordHash, avatarPath, skills, goal, autoApply, autoTasks, user.id]
   );
 
   if (req.file && user.avatar_path) removeFile(path.join(AVATAR_DIR, path.basename(user.avatar_path)));

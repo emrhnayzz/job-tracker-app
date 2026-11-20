@@ -36,6 +36,7 @@ const Timeline = ({ events, onAddNote }) => {
 
   const describe = (item) => {
     if (item.type === "note") return item.note;
+    if (item.type === "mail") return `${t(`mail.kind.${item.mail_kind}`)}: ${item.note}`;
     if (item.type === "created") return t("timeline.created", { status: t(`status.${item.to_status}`) });
     return t("timeline.moved", { from: t(`status.${item.from_status}`), to: t(`status.${item.to_status}`) });
   };
@@ -56,7 +57,12 @@ const Timeline = ({ events, onAddNote }) => {
               }`}
             />
             <p className="text-sm">{describe(item)}</p>
-            <p className="mt-0.5 text-xs text-muted">{formatDateTime(item.created_at)}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+              {formatDateTime(item.created_at)}
+              {item.auto && (
+                <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">{t("timeline.auto")}</span>
+              )}
+            </p>
           </li>
         ))}
         {events.length === 0 && <li className="text-sm text-muted">{t("timeline.empty")}</li>}

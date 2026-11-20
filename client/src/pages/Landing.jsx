@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowRight, BarChart3, BellRing, Github, KanbanSquare, ShieldCheck, Target } from "lucide-react";
+import { ArrowRight, BarChart3, Github, KanbanSquare, MailCheck, ShieldCheck, Target } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../i18n";
 import { wakeServer } from "../lib/api";
@@ -56,7 +56,7 @@ const BoardPreview = () => {
 
 const FEATURES = [
   ["board", KanbanSquare],
-  ["timeline", BellRing],
+  ["inbox", MailCheck],
   ["match", Target],
   ["insights", BarChart3],
 ];
@@ -73,12 +73,12 @@ export default function Landing() {
   const runDemo = useCallback(
     () =>
       startDemo(lang)
-        .then(() => navigate(params.get("view") === "insights" ? "/app/insights" : "/app"))
+        .then(() => navigate("/app"))
         .catch(() => {
           toast.error(t("error.demo"));
           setStarting(false);
         }),
-    [startDemo, lang, navigate, t, params]
+    [startDemo, lang, navigate, t]
   );
 
   const openDemo = () => {

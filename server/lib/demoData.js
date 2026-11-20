@@ -254,4 +254,54 @@ const seedDemoApplications = async (client, userId, lang) => {
   }
 };
 
-module.exports = { seedDemoApplications, DEMO_APPLICATIONS, DEMO_SKILLS };
+// Three emails wait in the demo inbox, so a visitor can see a status change
+// happen from an email with one click.
+const DEMO_MAILS = {
+  de: (date) => [
+    {
+      sender: "Fuchsbau Studios Recruiting <jobs@fuchsbau-studios.example>",
+      subject: "Ihre Bewerbung als Werkstudent Frontend (React)",
+      text: "Guten Tag,\n\nvielen Dank für Ihre Bewerbung und Ihr Interesse an Fuchsbau Studios. Leider müssen wir Ihnen mitteilen, dass wir uns für andere Bewerber entschieden haben.\n\nWir wünschen Ihnen für Ihren weiteren Weg alles Gute.\n\nIhr Recruiting-Team",
+    },
+    {
+      sender: "Blaupause Cloud <talent@blaupause-cloud.example>",
+      subject: "Einladung zum Vorstellungsgespräch",
+      text: `Hallo,\n\nIhre Bewerbung als Werkstudent Backend (Node.js) hat uns überzeugt. Gern möchten wir Sie persönlich kennenlernen und laden Sie zu einem Gespräch am ${date} um 14:00 Uhr per Teams ein.\n\nPasst Ihnen der Termin?\n\nViele Grüße\nBlaupause Cloud`,
+    },
+    {
+      sender: "Thüringer Datenhaus <bewerbung@thueringer-datenhaus.example>",
+      subject: "Eingangsbestätigung Ihrer Bewerbung",
+      text: "Sehr geehrte Bewerberin, sehr geehrter Bewerber,\n\nwir haben Ihre Bewerbung erhalten und prüfen Ihre Unterlagen. Wir melden uns in Kürze bei Ihnen.\n\nThüringer Datenhaus",
+    },
+  ],
+  en: (date) => [
+    {
+      sender: "Fuchsbau Studios Recruiting <jobs@fuchsbau-studios.example>",
+      subject: "Your application: Werkstudent Frontend (React)",
+      text: "Hello,\n\nThank you for applying to Fuchsbau Studios. Unfortunately, we have decided not to move forward with your application and have chosen other candidates.\n\nWe wish you all the best.\n\nThe recruiting team",
+    },
+    {
+      sender: "Blaupause Cloud <talent@blaupause-cloud.example>",
+      subject: "Invitation to an interview",
+      text: `Hello,\n\nWe liked your application for Werkstudent Backend (Node.js) and would like to invite you to an interview on ${date} at 14:00 via Teams.\n\nAre you available then?\n\nBest regards\nBlaupause Cloud`,
+    },
+    {
+      sender: "Thüringer Datenhaus <bewerbung@thueringer-datenhaus.example>",
+      subject: "We received your application",
+      text: "Dear applicant,\n\nThank you for your application. We have received your application and we will review it and get back to you soon.\n\nThüringer Datenhaus",
+    },
+  ],
+};
+
+const seedDemoInbox = async (client, user, lang) => {
+  // Required here, not at the top: the processor is only needed for the demo.
+  const { receiveMail } = require("./mailProcessor");
+  const day = daysFromNow(5);
+  const pad = (value) => String(value).padStart(2, "0");
+  const date = `${pad(day.getDate())}.${pad(day.getMonth() + 1)}.${day.getFullYear()}`;
+  for (const mail of DEMO_MAILS[lang](date)) {
+    await receiveMail(client, { id: user.id, auto_apply: false }, { ...mail, source: "demo" });
+  }
+};
+
+module.exports = { seedDemoApplications, seedDemoInbox, DEMO_APPLICATIONS, DEMO_SKILLS };

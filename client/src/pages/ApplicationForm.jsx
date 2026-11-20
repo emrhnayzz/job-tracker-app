@@ -115,7 +115,9 @@ export default function ApplicationForm() {
     event.preventDefault();
     setSaving(true);
     try {
-      const saved = isEdit ? await update(id, form, cvFile) : await create(form, cvFile);
+      // The date-time field holds local wall-clock time: send it as an instant.
+      const values = { ...form, interview_date: form.interview_date ? new Date(form.interview_date).toISOString() : "" };
+      const saved = isEdit ? await update(id, values, cvFile) : await create(values, cvFile);
       toast.success(t(isEdit ? "toast.saved" : "toast.created"));
       navigate(`/app/a/${saved.id}`);
     } catch (err) {

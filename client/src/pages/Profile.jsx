@@ -98,6 +98,36 @@ export default function Profile() {
           <LanguageSwitch />
         </section>
 
+        <section className="card space-y-4 p-6">
+          <div>
+            <h2 className="font-semibold">{t("auto.title")}</h2>
+            <p className="text-sm text-muted">{t("auto.lead")}</p>
+          </div>
+          {[
+            ["auto_tasks", "auto.tasks", "auto.tasksHint"],
+            ["auto_apply", "auto.apply", "auto.applyHint"],
+          ].map(([field, label, hint]) => (
+            <label key={field} className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-line p-4">
+              <span>
+                <span className="block text-sm font-medium">{t(label)}</span>
+                <span className="block text-sm text-muted">{t(hint)}</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={Boolean(user[field])}
+                onChange={(event) => save({ [field]: event.target.checked })}
+                className="mt-1 h-5 w-5 shrink-0 accent-[rgb(var(--accent))]"
+              />
+            </label>
+          ))}
+          {user.inbox_address && (
+            <div>
+              <span className="label">{t("auto.address")}</span>
+              <p className="rounded-xl border border-line bg-sunken/60 px-3.5 py-2.5 font-mono text-xs">{user.inbox_address}</p>
+            </div>
+          )}
+        </section>
+
         {!user.is_demo && (
           <form onSubmit={changePassword} className="card space-y-4 p-6">
             <h2 className="font-semibold">{t("profile.password")}</h2>
