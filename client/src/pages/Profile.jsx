@@ -1,186 +1,130 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { toast } from "react-hot-toast";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaCamera, FaUserCircle } from "react-icons/fa";
+import toast from "react-hot-toast";
+import { Camera } from "lucide-react";
+import { api, errorCode } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../i18n";
+import { Avatar } from "../components/AppShell";
+import { LanguageSwitch } from "../components/Brand";
+import { PageHeader } from "../components/Bits";
 
-const Profile = () => {
-  const [user, setUser] = useState({ username: "", email: "", avatar: "" });
-  const [passwords, setPasswords] = useState({
-    currentPassword: "",
-    newPassword: "",
-  });
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(true);
-
+export default function Profile() {
+  const { user, setUser, signOut } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
-  const storedUserId = localStorage.getItem("userId");
-  const token = localStorage.getItem("token");
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+  const [form, setForm] = useState({ username: user.username, email: user.email, bio: user.bio || "", skills: user.skills || "" });
+  const [passwords, setPasswords] = useState({ currentPassword: "", newPassword: "" });
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!storedUserId || !token) {
-        toast.error("Please log in.");
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const res = await axios.get(`${API_URL}/users/${storedUserId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(res.data);
-
-        if (res.data.avatar) {
-          const avatarUrl = res.data.avatar.startsWith("http")
-            ? res.data.avatar
-            : `${API_URL}${res.data.avatar}`;
-          setPreview(avatarUrl);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUser();
-  }, [storedUserId, token, navigate, API_URL]);
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    setFile(selectedFile);
-    if (selectedFile) {
-      setPreview(URL.createObjectURL(selectedFile));
-    }
-  };
-
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData();
-    formData.append("username", user.username);
-    formData.append("email", user.email);
-    if (passwords.currentPassword)
-      formData.append("currentPassword", passwords.currentPassword);
-    if (passwords.newPassword)
-      formData.append("newPassword", passwords.newPassword);
-    if (file) formData.append("avatar", file);
-
+  const save = async (payload, successKey = "toast.saved") => {
+    setSaving(true);
     try {
-      const res = await axios.put(
-        `${API_URL}/users/${storedUserId}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      toast.success("Profile updated successfully! 🚀");
-      setUser(res.data);
-      setPasswords({ currentPassword: "", newPassword: "" });
+      const body = new FormData();
+      for (const [key, value] of Object.entries(payload)) body.append(key, value);
+      const { data } = await api.put("/me", body);
+      setUser(data);
+      toast.success(t(successKey));
+      return true;
     } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Update failed");
+      toast.error(t(`error.${errorCode(err)}`));
+      return false;
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading)
-    return <div className="text-center mt-10 text-white">Loading...</div>;
+  const changePassword = async (event) => {
+    event.preventDefault();
+    if (await save(passwords, "toast.passwordChanged")) setPasswords({ currentPassword: "", newPassword: "" });
+  };
+
+  const deleteAccount = async () => {
+    if (!window.confirm(t("confirm.deleteAccount"))) return;
+    await api.delete("/me");
+    signOut();
+    navigate("/");
+  };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md border border-gray-700">
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">
-          Profile Settings
-        </h2>
+    <div className="mx-auto max-w-2xl">
+      <PageHeader eyebrow={t("profile.eyebrow")} title={t("profile.title")} />
 
-        <form onSubmit={handleUpdate} className="space-y-6">
-          <div className="flex flex-col items-center">
-            <div className="relative w-32 h-32 mb-4 group cursor-pointer">
-              {preview ? (
-                <img
-                  src={preview}
-                  alt="Profile"
-                  className="w-full h-full rounded-full object-cover border-4 border-indigo-600"
-                />
-              ) : (
-                <FaUserCircle className="w-full h-full text-gray-500" />
-              )}
-
-              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <FaCamera className="text-white text-2xl" />
-              </div>
-              <input
-                type="file"
-                onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
+      <div className="space-y-5">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            save(form);
+          }}
+          className="card space-y-5 p-6"
+        >
+          <div className="flex items-center gap-4">
+            <Avatar user={user} size="h-16 w-16 text-2xl" />
+            <label className="btn-ghost cursor-pointer">
+              <Camera size={16} /> {t("profile.changePhoto")}
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => event.target.files[0] && save({ avatar: event.target.files[0] })} />
+            </label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="username">{t("field.username")}</label>
+              <input id="username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="input" required minLength={2} />
             </div>
-            <p className="text-gray-400 text-sm">Click to change avatar</p>
-          </div>
-
-          <div>
-            <label className="text-gray-400 text-sm">Username</label>
-            <input
-              type="text"
-              value={user.username || ""}
-              onChange={(e) => setUser({ ...user, username: e.target.value })}
-              className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="text-gray-400 text-sm">Email</label>
-            <input
-              type="email"
-              value={user.email || ""}
-              onChange={(e) => setUser({ ...user, email: e.target.value })}
-              className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-
-          <div className="pt-4 border-t border-gray-700">
-            <h3 className="text-white text-md mb-2">Change Password</h3>
-            <div className="space-y-3">
-              <input
-                type="password"
-                placeholder="Current Password"
-                value={passwords.currentPassword}
-                onChange={(e) =>
-                  setPasswords({
-                    ...passwords,
-                    currentPassword: e.target.value,
-                  })
-                }
-                className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-              />
-              <input
-                type="password"
-                placeholder="New Password"
-                value={passwords.newPassword}
-                onChange={(e) =>
-                  setPasswords({ ...passwords, newPassword: e.target.value })
-                }
-                className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-              />
+            <div>
+              <label className="label" htmlFor="email">{t("field.email")}</label>
+              <input id="email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="input" disabled={user.is_demo} required />
             </div>
           </div>
-
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded transition duration-300 shadow-lg"
-          >
-            💾 Save Changes
-          </button>
+          <div>
+            <label className="label" htmlFor="bio">{t("profile.bio")}</label>
+            <textarea id="bio" rows={4} value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} className="input resize-y" maxLength={2000} />
+            <p className="mt-1.5 text-xs text-muted">{t("profile.bioHint")}</p>
+          </div>
+          <div>
+            <label className="label" htmlFor="skills">{t("profile.skills")}</label>
+            <input id="skills" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} className="input" maxLength={1000} placeholder="React, TypeScript, SQL" />
+            <p className="mt-1.5 text-xs text-muted">{t("profile.skillsHint")}</p>
+          </div>
+          <div className="flex justify-end">
+            <button type="submit" disabled={saving} className="btn-primary">{t("action.save")}</button>
+          </div>
         </form>
+
+        <section className="card flex items-center justify-between gap-4 p-6">
+          <div>
+            <h2 className="font-semibold">{t("profile.language")}</h2>
+            <p className="text-sm text-muted">{t("profile.languageHint")}</p>
+          </div>
+          <LanguageSwitch />
+        </section>
+
+        {!user.is_demo && (
+          <form onSubmit={changePassword} className="card space-y-4 p-6">
+            <h2 className="font-semibold">{t("profile.password")}</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="currentPassword">{t("profile.currentPassword")}</label>
+                <input id="currentPassword" type="password" value={passwords.currentPassword} onChange={(event) => setPasswords({ ...passwords, currentPassword: event.target.value })} className="input" required autoComplete="current-password" />
+              </div>
+              <div>
+                <label className="label" htmlFor="newPassword">{t("profile.newPassword")}</label>
+                <input id="newPassword" type="password" value={passwords.newPassword} onChange={(event) => setPasswords({ ...passwords, newPassword: event.target.value })} className="input" required minLength={8} autoComplete="new-password" />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" disabled={saving} className="btn-ghost">{t("profile.changePassword")}</button>
+            </div>
+          </form>
+        )}
+
+        <section className="card flex flex-wrap items-center justify-between gap-4 border-rejected/30 p-6">
+          <div>
+            <h2 className="font-semibold">{t("profile.delete")}</h2>
+            <p className="max-w-sm text-sm text-muted">{t("profile.deleteHint")}</p>
+          </div>
+          <button onClick={deleteAccount} className="btn-danger">{t("profile.delete")}</button>
+        </section>
       </div>
     </div>
   );
-};
-
-export default Profile;
+}

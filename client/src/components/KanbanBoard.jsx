@@ -1,227 +1,169 @@
-import { useState, useEffect, useCallback } from "react";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import axios from "axios";
-import { toast } from "react-hot-toast";
-import { Link, useLocation } from "react-router-dom";
-import { FaBriefcase, FaBuilding, FaCalendarAlt } from "react-icons/fa";
+import { useState } from "react";
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
+import { BellRing, CalendarClock, ListChecks, MapPin, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../i18n";
+import { matchSkills } from "../lib/skills";
+import { STATUSES, STATUS_STYLE, daysSince, needsFollowUp } from "../lib/status";
+import { Interest } from "./Extras";
 
-const KanbanBoard = ({ searchQuery }) => {
-  const [columns, setColumns] = useState({
-    Applied: { name: "Applied", items: [], color: "bg-blue-600" },
-    Interview: { name: "Interview", items: [], color: "bg-yellow-600" },
-    Offer: { name: "Offer", items: [], color: "bg-green-600" },
-    Rejected: { name: "Rejected", items: [], color: "bg-red-600" },
-  });
+const CardMeta = ({ app }) => {
+  const { t, formatDateTime } = useI18n();
 
-  const userId = localStorage.getItem("userId");
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
-  const token = localStorage.getItem("token");
-  const location = useLocation();
+  if (app.status === "Interview" && app.interview_date) {
+    return (
+      <span className="flex items-center gap-1 font-medium text-interview">
+        <CalendarClock size={13} /> {formatDateTime(app.interview_date)}
+      </span>
+    );
+  }
+  if (needsFollowUp(app)) {
+    return (
+      <span className="flex items-center gap-1 font-medium text-interview">
+        <BellRing size={13} /> {t("card.followUp")}
+      </span>
+    );
+  }
+  if (app.status === "Saved" || !app.applied_date) return null;
+  const days = daysSince(app.applied_date);
+  return <span>{days <= 0 ? t("card.today") : t("card.daysAgo", { count: days })}</span>;
+};
 
-  const fetchApplications = useCallback(async () => {
-    if (!userId) return;
-    try {
-      const res = await axios.get(`${API_URL}/applications`, {
-        params: { userId },
-        headers: { Authorization: `Bearer ${token}` },
-      });
+const Card = ({ app, index }) => {
+  const { user } = useAuth();
+  const { t } = useI18n();
+  // For saved jobs the match helps to decide where to apply first.
+  const match = app.status === "Saved" ? matchSkills(app, user) : null;
 
-      const newColumns = {
-        Applied: { name: "Applied", items: [], color: "bg-blue-600" },
-        Interview: { name: "Interview", items: [], color: "bg-yellow-600" },
-        Offer: { name: "Offer", items: [], color: "bg-green-600" },
-        Rejected: { name: "Rejected", items: [], color: "bg-red-600" },
-      };
-
-      const apps = Array.isArray(res.data) ? res.data : res.data.data || [];
-
-      if (Array.isArray(apps)) {
-        apps.forEach((app) => {
-          const statusKey =
-            Object.keys(newColumns).find(
-              (k) => k.toLowerCase() === app.status?.toLowerCase()
-            ) || app.status;
-
-          if (newColumns[statusKey]) {
-            if (
-              searchQuery &&
-              !app.company.toLowerCase().includes(searchQuery.toLowerCase()) &&
-              !app.position.toLowerCase().includes(searchQuery.toLowerCase())
-            ) {
-              return;
-            }
-            newColumns[statusKey].items.push(app);
-          }
-        });
-        setColumns(newColumns);
-      }
-    } catch (err) {
-      console.error("Kanban Error:", err);
-    }
-  }, [API_URL, searchQuery, token, userId]);
-
-  useEffect(() => {
-    fetchApplications();
-  }, [fetchApplications, location.key]);
-
-  useEffect(() => {
-    const onFocus = () => fetchApplications();
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") fetchApplications();
-    };
-
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [fetchApplications]);
-
-  const onDragEnd = async (result) => {
-    const { source, destination, draggableId } = result;
-
-    if (!destination) return;
-    if (
-      source.droppableId === destination.droppableId &&
-      source.index === destination.index
-    ) {
-      return;
-    }
-
-    const sourceColumn = columns[source.droppableId];
-    const destColumn = columns[destination.droppableId];
-
-    const sourceItems = [...sourceColumn.items];
-    const destItems =
-      source.droppableId === destination.droppableId
-        ? sourceItems
-        : [...destColumn.items];
-
-    const [removed] = sourceItems.splice(source.index, 1);
-
-    const itemWithNewStatus = { ...removed, status: destination.droppableId };
-
-    destItems.splice(destination.index, 0, itemWithNewStatus);
-
-    const newColumns = {
-      ...columns,
-      [source.droppableId]: {
-        ...sourceColumn,
-        items: sourceItems,
-      },
-      [destination.droppableId]: {
-        ...destColumn,
-        items: destItems,
-      },
-    };
-
-    setColumns(newColumns);
-
-    try {
-      const { _id, id, created_at, updated_at, user_id, ...cleanItem } =
-        itemWithNewStatus;
-
-      const payload = {
-        ...cleanItem,
-        status: destination.droppableId,
-      };
-
-      await axios.put(`${API_URL}/applications/${draggableId}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      toast.success("Updated succesfully!");
-    } catch (err) {
-      console.error("Update failed", err);
-      toast.error("Hata oluştu, geri alınıyor...");
-
-      setTimeout(() => window.location.reload(), 1000);
-    }
-  };
   return (
-    <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4 h-full">
-      <DragDropContext onDragEnd={onDragEnd}>
-        {Object.entries(columns).map(([columnId, column]) => (
-          <div key={columnId} className="flex-1 min-w-[280px]">
-            <div
-              className={`p-3 rounded-t-lg ${column.color} flex justify-between items-center`}
-            >
-              <h3 className="font-bold text-white">{column.name}</h3>
-              <span className="bg-white bg-opacity-20 text-white px-2 py-1 rounded text-xs">
-                {column.items.length}
-              </span>
-            </div>
-
-            <Droppable droppableId={columnId}>
-              {(provided, snapshot) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className={`p-3 rounded-b-lg min-h-[500px] transition-colors ${
-                    snapshot.isDraggingOver
-                      ? "bg-gray-700 bg-opacity-50"
-                      : "bg-gray-800 bg-opacity-30"
-                  } border border-gray-700 border-t-0`}
-                >
-                  {column.items.map((item, index) => (
-                    <Draggable
-                      key={item.id || item._id}
-                      draggableId={String(item.id || item._id)}
-                      index={index}
-                    >
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`p-4 mb-3 rounded-lg shadow-md border border-gray-700 hover:border-gray-500 transition-all group relative ${
-                            snapshot.isDragging
-                              ? "bg-indigo-600 rotate-2 scale-105"
-                              : "bg-gray-800"
-                          }`}
-                        >
-                          <Link
-                            to={`/edit/${item.id || item._id}`}
-                            className="block"
-                          >
-                            <h4 className="font-bold text-white text-lg mb-1">
-                              {item.company}
-                            </h4>
-                            <p className="text-gray-400 text-sm mb-3">
-                              {item.position}
-                            </p>
-                            <div className="flex items-center gap-3 text-xs text-gray-500">
-                              <div className="flex items-center gap-1">
-                                <FaCalendarAlt />
-                                <span>
-                                  {item.dateApplied
-                                    ? new Date(
-                                        item.dateApplied
-                                      ).toLocaleDateString()
-                                    : "No Date"}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <FaBuilding />
-                                <span>{item.workType}</span>
-                              </div>
-                            </div>
-                          </Link>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
+    <Draggable draggableId={String(app.id)} index={index}>
+      {(provided, snapshot) => (
+        <Link
+          to={`/app/a/${app.id}`}
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          className={`mb-2 block rounded-xl border bg-surface p-3.5 transition-shadow ${
+            snapshot.isDragging ? "border-accent shadow-lift" : "border-line shadow-card hover:border-muted/50"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-semibold leading-snug">{app.company}</p>
+            <Interest value={app.interest} size={12} />
           </div>
-        ))}
-      </DragDropContext>
-    </div>
+          <p className="mt-0.5 line-clamp-2 text-sm text-muted">{app.position}</p>
+          <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted">
+            <span className="flex min-w-0 items-center gap-2.5">
+              {app.location && (
+                <span className="flex min-w-0 items-center gap-1">
+                  <MapPin size={13} className="shrink-0" />
+                  <span className="truncate">{app.location}</span>
+                </span>
+              )}
+              {app.open_tasks > 0 && (
+                <span className="flex shrink-0 items-center gap-1" title={t("card.openTasks", { count: app.open_tasks })}>
+                  <ListChecks size={13} /> {app.open_tasks}
+                </span>
+              )}
+            </span>
+            <span className="shrink-0">
+              {match ? (
+                <span className="rounded-full bg-offer/10 px-2 py-0.5 font-semibold text-offer">
+                  {t("card.match", { score: match.score })}
+                </span>
+              ) : (
+                <CardMeta app={app} />
+              )}
+            </span>
+          </div>
+        </Link>
+      )}
+    </Draggable>
   );
 };
 
-export default KanbanBoard;
+// Two fields in the column head: the quickest way to note a job.
+const QuickAdd = ({ status, onAdd, onClose }) => {
+  const { t } = useI18n();
+  const [company, setCompany] = useState("");
+  const [position, setPosition] = useState("");
+
+  const submit = (event) => {
+    event.preventDefault();
+    if (!company.trim() || !position.trim()) return;
+    onAdd({ company: company.trim(), position: position.trim(), status });
+    onClose();
+  };
+
+  return (
+    <form onSubmit={submit} onKeyDown={(event) => event.key === "Escape" && onClose()} className="mb-2 space-y-1.5 rounded-xl border border-accent bg-surface p-2.5">
+      <input autoFocus value={company} onChange={(event) => setCompany(event.target.value)} placeholder={t("field.company")} className="input !py-1.5" maxLength={255} />
+      <input value={position} onChange={(event) => setPosition(event.target.value)} placeholder={t("field.position")} className="input !py-1.5" maxLength={255} />
+      <div className="flex justify-end gap-1.5">
+        <button type="button" onClick={onClose} className="btn-quiet !py-1.5 text-xs">{t("action.cancel")}</button>
+        <button type="submit" className="btn-primary !py-1.5 text-xs">{t("action.create")}</button>
+      </div>
+    </form>
+  );
+};
+
+// Most wanted first, then newest.
+const byPriority = (a, b) => (b.interest || 0) - (a.interest || 0) || new Date(b.created_at) - new Date(a.created_at);
+
+export default function KanbanBoard({ applications, onMove, onAdd }) {
+  const { t } = useI18n();
+  const [addingTo, setAddingTo] = useState(null);
+
+  const onDragEnd = ({ destination, source, draggableId }) => {
+    if (!destination || destination.droppableId === source.droppableId) return;
+    onMove(Number(draggableId), destination.droppableId);
+  };
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6">
+        {STATUSES.map((status) => {
+          const items = applications.filter((app) => app.status === status).sort(byPriority);
+          return (
+            <section key={status} className="flex w-[272px] shrink-0 flex-col lg:w-auto lg:min-w-0 lg:flex-1">
+              <header className="mb-2 flex items-center gap-2 px-1.5">
+                <span className={`h-2 w-2 rounded-full ${STATUS_STYLE[status].dot}`} />
+                <h2 className="text-sm font-semibold">{t(`status.${status}`)}</h2>
+                <span className="text-sm tabular-nums text-muted">{items.length}</span>
+                <button
+                  onClick={() => setAddingTo(addingTo === status ? null : status)}
+                  className="ml-auto rounded-md p-1 text-muted transition hover:bg-sunken hover:text-ink"
+                  aria-label={t("board.quickAdd", { status: t(`status.${status}`) })}
+                  title={t("board.quickAdd", { status: t(`status.${status}`) })}
+                >
+                  <Plus size={15} />
+                </button>
+              </header>
+              <Droppable droppableId={status}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-[320px] flex-1 rounded-2xl p-2 transition-colors ${
+                      snapshot.isDraggingOver ? `${STATUS_STYLE[status].soft} ring-1 ring-inset ring-line` : "bg-sunken/70"
+                    } ${status === "Rejected" ? "opacity-80" : ""}`}
+                  >
+                    {addingTo === status && <QuickAdd status={status} onAdd={onAdd} onClose={() => setAddingTo(null)} />}
+                    {items.map((app, index) => (
+                      <Card key={app.id} app={app} index={index} />
+                    ))}
+                    {provided.placeholder}
+                    {items.length === 0 && addingTo !== status && !snapshot.isDraggingOver && (
+                      <p className="px-2 py-6 text-center text-xs text-muted">{t(`board.empty.${status}`)}</p>
+                    )}
+                  </div>
+                )}
+              </Droppable>
+            </section>
+          );
+        })}
+      </div>
+    </DragDropContext>
+  );
+}

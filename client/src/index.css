@@ -2,28 +2,115 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global Styles */
-body {
-  @apply bg-gray-50 text-gray-900 transition-colors duration-300;
+@layer base {
+  :root {
+    --bg: 246 243 236;
+    --surface: 255 255 255;
+    --sunken: 238 234 224;
+    --ink: 23 26 24;
+    --muted: 104 110 104;
+    --line: 225 220 208;
+    --accent: 26 122 79;
+    --accent-ink: 255 255 255;
+    --saved: 100 110 125;
+    --applied: 44 104 196;
+    --interview: 190 122 12;
+    --offer: 26 122 79;
+    --rejected: 190 68 68;
+  }
+
+  .dark {
+    --bg: 13 18 16;
+    --surface: 22 29 26;
+    --sunken: 17 23 20;
+    --ink: 235 240 236;
+    --muted: 146 158 150;
+    --line: 40 52 46;
+    --accent: 86 208 145;
+    --accent-ink: 8 22 15;
+    --saved: 148 160 176;
+    --applied: 110 165 250;
+    --interview: 240 180 70;
+    --offer: 86 208 145;
+    --rejected: 240 128 128;
+  }
+
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-bg font-sans text-ink antialiased;
+  }
+  ::selection {
+    background: rgb(var(--accent) / 0.25);
+  }
 }
 
-/* Dark Mode Global Styles */
-.dark body {
-  @apply bg-gray-900 text-gray-100;
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-accent-ink hover:brightness-110;
+  }
+  .btn-ghost {
+    @apply btn border border-line bg-surface text-ink hover:bg-sunken;
+  }
+  .btn-quiet {
+    @apply btn px-3 text-muted hover:bg-sunken hover:text-ink;
+  }
+  .btn-danger {
+    @apply btn border border-rejected/40 text-rejected hover:bg-rejected/10;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/70
+      focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-muted;
+  }
 }
 
-/* Animations */
-.animation-fade-in {
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
+@keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+.rise {
+  animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Landing page: one card travels across the preview board. */
+@keyframes travel {
+  0%, 18% { transform: translate(0, 0) rotate(0deg); }
+  26% { transform: translate(52%, -6px) rotate(3deg); }
+  34%, 52% { transform: translate(104%, 0) rotate(0deg); }
+  60% { transform: translate(156%, -6px) rotate(3deg); }
+  68%, 92% { transform: translate(208%, 0) rotate(0deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.travel {
+  animation: travel 9s cubic-bezier(0.6, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .travel {
+    animation: none;
   }
 }
