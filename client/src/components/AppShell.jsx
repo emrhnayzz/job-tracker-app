@@ -72,7 +72,7 @@ export default function AppShell({ children }) {
   return (
     <div className="min-h-screen">
       {user.is_demo && (
-        <div className="bg-ink px-4 py-2 text-center text-xs text-bg sm:text-sm">
+        <div className="bg-ink px-4 py-1.5 text-center text-xs text-bg">
           {t("demo.banner")}{" "}
           <button
             onClick={() => {

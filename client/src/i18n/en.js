@@ -9,7 +9,6 @@ export default {
   "nav.logout": "Sign out",
 
   "demo.user": "Demo account",
-  "demo.eyebrow": "Demo with sample data",
   "demo.banner": "You are looking at a demo with sample data. It is deleted after 24 hours.",
   "demo.bannerAction": "Create your own account",
 
@@ -60,7 +59,6 @@ export default {
   "field.email": "Email",
   "field.password": "Password",
 
-  "attention.title": "Needs attention",
   "attention.interview": "Interview on {when}",
   "attention.followUp": "No reply so far. Time to follow up.",
 
@@ -68,17 +66,11 @@ export default {
   "empty.text": "Add your first application, or save a job you want to apply to later.",
   "empty.action": "Add first application",
 
-  "dashboard.eyebrow": "Hello {name}",
   "dashboard.title": "Your applications",
-  "dashboard.search": "Search company, position or location",
+  "dashboard.search": "Company or position",
   "dashboard.noMatch": "No application matches your search.",
 
-  "stat.active": "Active",
-  "stat.activeHint": "Applied or interviewing",
-  "stat.interviews": "Interviews",
-  "stat.offers": "Offers",
   "stat.responseRate": "Response rate",
-  "stat.responseHint": "{answered} of {sent} answered",
   "stat.sent": "Sent",
   "stat.interviewRate": "Interview rate",
   "stat.saved": "Saved",
@@ -247,8 +239,6 @@ export default {
   "goal.more": "Raise the goal",
 
   "card.match": "{score}% match",
-  "card.openTasks_one": "{count} open task",
-  "card.openTasks_other": "{count} open tasks",
   "board.quickAdd": "Quick add to “{status}”",
   "attention.task": "A task is due.",
   "dashboard.export": "Export as CSV",
@@ -324,9 +314,6 @@ export default {
   "toast.mailUnknown": "No link to an application found.",
 
   "attention.debrief": "The interview is over. How did it go?",
-  "attention.mails_one": "{count} email is waiting for your confirmation",
-  "attention.mails_other": "{count} emails are waiting for your confirmation",
-  "attention.mailsHint": "Zusage worked out what they mean. One click applies the proposal.",
   "timeline.auto": "automatic",
 
   "auto.title": "Automation",
@@ -354,4 +341,21 @@ export default {
   "cv.error": "The file could not be read. Is it a PDF with text, not a scan?",
   "cv.privacy": "The file stays on your device. Only the list of skills is saved.",
   "toast.skillsAdded": "Skills added",
+
+  "summary.mails_one": "{count} email to check",
+  "summary.mails_other": "{count} emails to check",
+  "summary.debrief_one": "{count} interview to wrap up",
+  "summary.debrief_other": "{count} interviews to wrap up",
+  "summary.interview_one": "{count} interview this week",
+  "summary.interview_other": "{count} interviews this week",
+  "summary.followUp_one": "{count} follow-up due",
+  "summary.followUp_other": "{count} follow-ups due",
+  "summary.task_one": "{count} task due",
+  "summary.task_other": "{count} tasks due",
+  "summary.goal": "Weekly goal {sent}/{goal}",
+  "summary.allClear": "Nothing urgent.",
+  "summary.details": "Details",
+  "summary.hide": "Hide",
+  "board.expand": "Open “{status}”",
+  "board.collapse": "Collapse “{status}”",
 };

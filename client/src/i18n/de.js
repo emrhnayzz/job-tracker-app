@@ -9,7 +9,6 @@ export default {
   "nav.logout": "Abmelden",
 
   "demo.user": "Demo-Konto",
-  "demo.eyebrow": "Demo mit Beispieldaten",
   "demo.banner": "Du siehst eine Demo mit Beispieldaten. Sie wird nach 24 Stunden gelöscht.",
   "demo.bannerAction": "Eigenes Konto anlegen",
 
@@ -60,7 +59,6 @@ export default {
   "field.email": "E-Mail",
   "field.password": "Passwort",
 
-  "attention.title": "Jetzt wichtig",
   "attention.interview": "Gespräch am {when}",
   "attention.followUp": "Keine Antwort bisher. Zeit nachzufassen.",
 
@@ -68,17 +66,11 @@ export default {
   "empty.text": "Lege deine erste Bewerbung an oder merke dir eine Stelle, auf die du dich später bewerben willst.",
   "empty.action": "Erste Bewerbung anlegen",
 
-  "dashboard.eyebrow": "Hallo {name}",
   "dashboard.title": "Deine Bewerbungen",
-  "dashboard.search": "Unternehmen, Stelle oder Ort suchen",
+  "dashboard.search": "Unternehmen oder Stelle",
   "dashboard.noMatch": "Keine Bewerbung passt zur Suche.",
 
-  "stat.active": "Aktiv",
-  "stat.activeHint": "Beworben oder im Gespräch",
-  "stat.interviews": "Gespräche",
-  "stat.offers": "Zusagen",
   "stat.responseRate": "Antwortquote",
-  "stat.responseHint": "{answered} von {sent} beantwortet",
   "stat.sent": "Abgeschickt",
   "stat.interviewRate": "Gesprächsquote",
   "stat.saved": "Gemerkt",
@@ -247,8 +239,6 @@ export default {
   "goal.more": "Ziel erhöhen",
 
   "card.match": "{score} % Passung",
-  "card.openTasks_one": "{count} offene Aufgabe",
-  "card.openTasks_other": "{count} offene Aufgaben",
   "board.quickAdd": "Schnell hinzufügen zu „{status}“",
   "attention.task": "Eine Aufgabe ist fällig.",
   "dashboard.export": "Als CSV exportieren",
@@ -324,9 +314,6 @@ export default {
   "toast.mailUnknown": "Kein Bezug zu einer Bewerbung erkannt.",
 
   "attention.debrief": "Das Gespräch ist vorbei. Wie lief es?",
-  "attention.mails_one": "{count} E-Mail wartet auf deine Bestätigung",
-  "attention.mails_other": "{count} E-Mails warten auf deine Bestätigung",
-  "attention.mailsHint": "Zusage hat erkannt, was sie bedeuten. Ein Klick übernimmt den Vorschlag.",
   "timeline.auto": "automatisch",
 
   "auto.title": "Automatisierung",
@@ -354,4 +341,21 @@ export default {
   "cv.error": "Die Datei konnte nicht gelesen werden. Ist es ein PDF mit Text, kein Scan?",
   "cv.privacy": "Die Datei bleibt auf deinem Gerät. Gespeichert wird nur die Liste der Kenntnisse.",
   "toast.skillsAdded": "Kenntnisse übernommen",
+
+  "summary.mails_one": "{count} E-Mail prüfen",
+  "summary.mails_other": "{count} E-Mails prüfen",
+  "summary.debrief_one": "{count} Gespräch nachbereiten",
+  "summary.debrief_other": "{count} Gespräche nachbereiten",
+  "summary.interview_one": "{count} Gespräch diese Woche",
+  "summary.interview_other": "{count} Gespräche diese Woche",
+  "summary.followUp_one": "{count} Mal nachfassen",
+  "summary.followUp_other": "{count} Mal nachfassen",
+  "summary.task_one": "{count} Aufgabe fällig",
+  "summary.task_other": "{count} Aufgaben fällig",
+  "summary.goal": "Wochenziel {sent}/{goal}",
+  "summary.allClear": "Nichts Dringendes.",
+  "summary.details": "Details",
+  "summary.hide": "Ausblenden",
+  "board.expand": "„{status}“ aufklappen",
+  "board.collapse": "„{status}“ einklappen",
 };
