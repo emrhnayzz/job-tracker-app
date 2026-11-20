@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   ArrowLeft, CalendarClock, CalendarPlus, Copy, Download, ExternalLink, FileText, Mail, MapPin, Pencil, Send, Sparkles, Trash2, Wallet,
@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../i18n";
 import { STATUSES, STATUS_STYLE, formatSalary, toDateInput } from "../lib/status";
 import { exportInterview } from "../lib/export";
+import { matchSkills } from "../lib/skills";
 import { Spinner, StatusBadge } from "../components/Bits";
 import { FollowUpMail, Interest, SkillMatch, Tasks } from "../components/Extras";
 
@@ -125,9 +126,16 @@ const CoverLetter = ({ application }) => {
   );
 };
 
+// The page is split by what someone came to do, so only one topic is on
+// screen at a time. The tab lives in the URL and can be linked to.
+const TABS = ["overview", "job", "writing", "history"];
+
 export default function ApplicationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const tab = TABS.includes(params.get("tab")) ? params.get("tab") : "overview";
   const { update, setStatus, remove, reload } = useApplications();
   const { t, formatDate, formatDateTime } = useI18n();
   const [application, setApplication] = useState(null);
@@ -199,6 +207,8 @@ export default function ApplicationDetail() {
   };
 
   const salary = formatSalary(application);
+  const match = matchSkills(application, user);
+  const openTasks = application.tasks.filter((task) => !task.done).length;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -206,7 +216,7 @@ export default function ApplicationDetail() {
         <ArrowLeft size={16} /> {t("action.backToBoard")}
       </Link>
 
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <StatusBadge status={application.status} />
@@ -226,82 +236,119 @@ export default function ApplicationDetail() {
         </div>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <div className="space-y-5">
-          <section className="card grid gap-5 p-6 sm:grid-cols-2">
-            <Fact icon={CalendarClock} label={t("field.applied_date")}>
-              {application.applied_date ? formatDate(application.applied_date) : t("card.notSent")}
-            </Fact>
-            <Fact icon={MapPin} label={t("field.location")}>
-              {[application.location, application.work_type && t(`workType.${application.work_type}`)].filter(Boolean).join(" · ") || "–"}
-            </Fact>
-            <Fact icon={Wallet} label={t("field.salary")}>{salary || "–"}</Fact>
-            <Fact icon={CalendarClock} label={t("field.interview_date")}>
-              {application.interview_date ? (
-                <>
-                  {formatDateTime(application.interview_date)}
-                  <button
-                    onClick={() => exportInterview(application, t("calendar.title", { company: application.company }))}
-                    className="mt-1 flex items-center gap-1.5 text-xs font-medium text-accent"
-                  >
-                    <CalendarPlus size={13} /> {t("calendar.add")}
-                  </button>
-                </>
-              ) : (
-                "–"
-              )}
-            </Fact>
-            {(application.recruiter_name || application.recruiter_email) && (
-              <Fact icon={Mail} label={t("field.recruiter_name")}>
-                {application.recruiter_name}
-                {application.recruiter_email && (
-                  <a href={`mailto:${application.recruiter_email}`} className="block text-accent">{application.recruiter_email}</a>
+      <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-line" role="tablist">
+        {TABS.map((key) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setParams(key === "overview" ? {} : { tab: key }, { replace: true })}
+            className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-2.5 text-sm font-medium transition ${
+              tab === key ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            {t(`tab.${key}`)}
+            {key === "overview" && openTasks > 0 && <span className="rounded-full bg-sunken px-1.5 text-xs tabular-nums text-muted">{openTasks}</span>}
+            {key === "job" && match && <span className="text-xs font-normal tabular-nums text-offer">{match.score} %</span>}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "overview" && (
+        <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+          <div className="space-y-5">
+            <section className="card grid gap-5 p-6 sm:grid-cols-2">
+              <Fact icon={CalendarClock} label={t("field.applied_date")}>
+                {application.applied_date ? formatDate(application.applied_date) : t("card.notSent")}
+              </Fact>
+              <Fact icon={MapPin} label={t("field.location")}>
+                {[application.location, application.work_type && t(`workType.${application.work_type}`)].filter(Boolean).join(" · ") || "–"}
+              </Fact>
+              <Fact icon={Wallet} label={t("field.salary")}>{salary || "–"}</Fact>
+              <Fact icon={CalendarClock} label={t("field.interview_date")}>
+                {application.interview_date ? (
+                  <>
+                    {formatDateTime(application.interview_date)}
+                    <button
+                      onClick={() => exportInterview(application, t("calendar.title", { company: application.company }))}
+                      className="mt-1 flex items-center gap-1.5 text-xs font-medium text-accent"
+                    >
+                      <CalendarPlus size={13} /> {t("calendar.add")}
+                    </button>
+                  </>
+                ) : (
+                  "–"
                 )}
               </Fact>
-            )}
-            {application.link && (
-              <Fact icon={ExternalLink} label={t("field.link")}>
-                <a href={application.link} target="_blank" rel="noreferrer" className="text-accent">{t("detail.openPosting")}</a>
-              </Fact>
-            )}
-            {application.cv_path && (
-              <Fact icon={FileText} label={t("field.cv")}>
-                <button onClick={downloadCv} className="inline-flex items-center gap-1.5 text-accent">
-                  <Download size={14} /> {application.cv_name || "cv.pdf"}
-                </button>
-              </Fact>
-            )}
-          </section>
-
-          {application.notes && (
-            <section className="card p-6">
-              <h2 className="eyebrow mb-3">{t("field.notes")}</h2>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">{application.notes}</p>
+              {(application.recruiter_name || application.recruiter_email) && (
+                <Fact icon={Mail} label={t("field.recruiter_name")}>
+                  {application.recruiter_name}
+                  {application.recruiter_email && (
+                    <a href={`mailto:${application.recruiter_email}`} className="block text-accent">{application.recruiter_email}</a>
+                  )}
+                </Fact>
+              )}
+              {application.link && (
+                <Fact icon={ExternalLink} label={t("field.link")}>
+                  <a href={application.link} target="_blank" rel="noreferrer" className="text-accent">{t("detail.openPosting")}</a>
+                </Fact>
+              )}
+              {application.cv_path && (
+                <Fact icon={FileText} label={t("field.cv")}>
+                  <button onClick={downloadCv} className="inline-flex items-center gap-1.5 text-accent">
+                    <Download size={14} /> {application.cv_name || "cv.pdf"}
+                  </button>
+                </Fact>
+              )}
             </section>
-          )}
 
-          {application.description && (
+            {application.notes && (
+              <section className="card p-6">
+                <h2 className="eyebrow mb-3">{t("field.notes")}</h2>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{application.notes}</p>
+              </section>
+            )}
+          </div>
+
+          <div className="space-y-5">
+            <Tasks application={application} onChange={refresh} />
+            <section className="card p-6">
+              <h2 className="eyebrow mb-1.5">{t("field.follow_up_date")}</h2>
+              <p className="mb-3 text-sm text-muted">{t("detail.followUpHint")}</p>
+              <input type="date" value={toDateInput(application.follow_up_date)} onChange={setFollowUp} className="input" aria-label={t("field.follow_up_date")} />
+              {application.status === "Applied" && <FollowUpMail application={application} />}
+            </section>
+          </div>
+        </div>
+      )}
+
+      {tab === "job" && (
+        <div className="mx-auto max-w-3xl space-y-5">
+          <SkillMatch application={application} />
+          {application.description ? (
             <section className="card p-6">
               <h2 className="eyebrow mb-3">{t("field.description")}</h2>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{application.description}</p>
             </section>
+          ) : (
+            <Link to={`/app/a/${application.id}/edit`} className="btn-ghost">
+              <Pencil size={16} /> {t("detail.addDescription")}
+            </Link>
           )}
+        </div>
+      )}
 
-          <SkillMatch application={application} />
+      {tab === "writing" && (
+        <div className="mx-auto max-w-3xl">
           <CoverLetter application={application} />
         </div>
+      )}
 
-        <div className="space-y-5">
-          <Tasks application={application} onChange={refresh} />
-          <section className="card p-6">
-            <h2 className="eyebrow mb-1.5">{t("field.follow_up_date")}</h2>
-            <p className="mb-3 text-sm text-muted">{t("detail.followUpHint")}</p>
-            <input type="date" value={toDateInput(application.follow_up_date)} onChange={setFollowUp} className="input" aria-label={t("field.follow_up_date")} />
-            {application.status === "Applied" && <FollowUpMail application={application} />}
-          </section>
+      {tab === "history" && (
+        <div className="mx-auto max-w-3xl">
           <Timeline events={application.events} onAddNote={addNote} />
         </div>
-      </div>
+      )}
     </div>
   );
 }

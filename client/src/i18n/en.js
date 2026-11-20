@@ -358,4 +358,10 @@ export default {
   "summary.hide": "Hide",
   "board.expand": "Open “{status}”",
   "board.collapse": "Collapse “{status}”",
+
+  "tab.overview": "Overview",
+  "tab.job": "Job",
+  "tab.writing": "Cover letter",
+  "tab.history": "History",
+  "detail.addDescription": "Add the job description",
 };

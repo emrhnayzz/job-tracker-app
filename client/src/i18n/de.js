@@ -358,4 +358,10 @@ export default {
   "summary.hide": "Ausblenden",
   "board.expand": "„{status}“ aufklappen",
   "board.collapse": "„{status}“ einklappen",
+
+  "tab.overview": "Übersicht",
+  "tab.job": "Stelle",
+  "tab.writing": "Anschreiben",
+  "tab.history": "Verlauf",
+  "detail.addDescription": "Stellenbeschreibung hinzufügen",
 };
