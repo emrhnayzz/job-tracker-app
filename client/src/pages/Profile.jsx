@@ -1,186 +1,274 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { toast } from "react-hot-toast";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaCamera, FaUserCircle } from "react-icons/fa";
+import toast from "react-hot-toast";
+import { Camera, Check, FileSearch, Plus } from "lucide-react";
+import { api, errorCode } from "../lib/api";
+import { readPdfText, splitSkills } from "../lib/cv";
+import { extractSkills } from "../lib/skills";
+import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../i18n";
+import { Avatar } from "../components/AppShell";
+import { LanguageSwitch } from "../components/Brand";
+import { PageHeader } from "../components/Bits";
 
-const Profile = () => {
-  const [user, setUser] = useState({ username: "", email: "", avatar: "" });
-  const [passwords, setPasswords] = useState({
-    currentPassword: "",
-    newPassword: "",
-  });
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(true);
+// Reads a CV in the browser and offers the skills it finds. The file itself
+// is not uploaded or stored.
+const CvImport = ({ current, onAdd }) => {
+  const { t } = useI18n();
+  const [state, setState] = useState("idle");
+  const [found, setFound] = useState([]);
+  const [chosen, setChosen] = useState(new Set());
 
-  const navigate = useNavigate();
-  const storedUserId = localStorage.getItem("userId");
-  const token = localStorage.getItem("token");
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+  const known = new Set(splitSkills(current).map((skill) => skill.toLowerCase()));
+  const fresh = found.filter((skill) => !known.has(skill.toLowerCase()));
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!storedUserId || !token) {
-        toast.error("Please log in.");
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const res = await axios.get(`${API_URL}/users/${storedUserId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(res.data);
-
-        if (res.data.avatar) {
-          const avatarUrl = res.data.avatar.startsWith("http")
-            ? res.data.avatar
-            : `${API_URL}${res.data.avatar}`;
-          setPreview(avatarUrl);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUser();
-  }, [storedUserId, token, navigate, API_URL]);
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    setFile(selectedFile);
-    if (selectedFile) {
-      setPreview(URL.createObjectURL(selectedFile));
-    }
-  };
-
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData();
-    formData.append("username", user.username);
-    formData.append("email", user.email);
-    if (passwords.currentPassword)
-      formData.append("currentPassword", passwords.currentPassword);
-    if (passwords.newPassword)
-      formData.append("newPassword", passwords.newPassword);
-    if (file) formData.append("avatar", file);
-
+  const read = async (event) => {
+    const file = event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    setState("reading");
     try {
-      const res = await axios.put(
-        `${API_URL}/users/${storedUserId}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      toast.success("Profile updated successfully! 🚀");
-      setUser(res.data);
-      setPasswords({ currentPassword: "", newPassword: "" });
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Update failed");
+      const skills = extractSkills(await readPdfText(file));
+      setFound(skills);
+      setChosen(new Set(skills));
+      setState("done");
+    } catch {
+      setState("error");
     }
   };
 
-  if (loading)
-    return <div className="text-center mt-10 text-white">Loading...</div>;
+  const toggle = (skill) =>
+    setChosen((previous) => {
+      const next = new Set(previous);
+      if (!next.delete(skill)) next.add(skill);
+      return next;
+    });
+
+  const selected = fresh.filter((skill) => chosen.has(skill));
 
   return (
-    <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md border border-gray-700">
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">
-          Profile Settings
-        </h2>
-
-        <form onSubmit={handleUpdate} className="space-y-6">
-          <div className="flex flex-col items-center">
-            <div className="relative w-32 h-32 mb-4 group cursor-pointer">
-              {preview ? (
-                <img
-                  src={preview}
-                  alt="Profile"
-                  className="w-full h-full rounded-full object-cover border-4 border-indigo-600"
-                />
-              ) : (
-                <FaUserCircle className="w-full h-full text-gray-500" />
-              )}
-
-              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <FaCamera className="text-white text-2xl" />
-              </div>
-              <input
-                type="file"
-                onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-            </div>
-            <p className="text-gray-400 text-sm">Click to change avatar</p>
-          </div>
-
-          <div>
-            <label className="text-gray-400 text-sm">Username</label>
-            <input
-              type="text"
-              value={user.username || ""}
-              onChange={(e) => setUser({ ...user, username: e.target.value })}
-              className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="text-gray-400 text-sm">Email</label>
-            <input
-              type="email"
-              value={user.email || ""}
-              onChange={(e) => setUser({ ...user, email: e.target.value })}
-              className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-
-          <div className="pt-4 border-t border-gray-700">
-            <h3 className="text-white text-md mb-2">Change Password</h3>
-            <div className="space-y-3">
-              <input
-                type="password"
-                placeholder="Current Password"
-                value={passwords.currentPassword}
-                onChange={(e) =>
-                  setPasswords({
-                    ...passwords,
-                    currentPassword: e.target.value,
-                  })
-                }
-                className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-              />
-              <input
-                type="password"
-                placeholder="New Password"
-                value={passwords.newPassword}
-                onChange={(e) =>
-                  setPasswords({ ...passwords, newPassword: e.target.value })
-                }
-                className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded transition duration-300 shadow-lg"
-          >
-            💾 Save Changes
-          </button>
-        </form>
+    <section className="card p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 max-w-md">
+          <h2 className="font-semibold">{t("cv.title")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("cv.lead")}</p>
+        </div>
+        <label className="btn-ghost cursor-pointer">
+          <FileSearch size={16} /> {t(state === "reading" ? "cv.reading" : "cv.choose")}
+          <input type="file" accept="application/pdf" className="hidden" onChange={read} disabled={state === "reading"} />
+        </label>
       </div>
-    </div>
+
+      {state === "error" && <p className="mt-4 rounded-xl bg-rejected/10 px-3.5 py-2.5 text-sm text-rejected">{t("cv.error")}</p>}
+
+      {state === "done" && (
+        <div className="mt-5 border-t border-line pt-4">
+          {found.length === 0 ? (
+            <p className="text-sm text-muted">{t("cv.none")}</p>
+          ) : (
+            <>
+              <p className="mb-3 text-sm">{t("cv.found", { total: found.length, fresh: fresh.length })}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {found.map((skill) => {
+                  const isKnown = known.has(skill.toLowerCase());
+                  const isOn = chosen.has(skill);
+                  return (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => !isKnown && toggle(skill)}
+                      disabled={isKnown}
+                      aria-pressed={isOn}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                        isKnown
+                          ? "bg-sunken text-muted"
+                          : isOn
+                            ? "bg-offer/10 text-offer"
+                            : "border border-dashed border-line text-muted hover:border-accent"
+                      }`}
+                    >
+                      {isKnown || isOn ? <Check size={12} /> : <Plus size={12} />} {skill}
+                    </button>
+                  );
+                })}
+              </div>
+              {fresh.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAdd(selected);
+                    setState("idle");
+                  }}
+                  disabled={selected.length === 0}
+                  className="btn-primary mt-4"
+                >
+                  {t("cv.apply", { count: selected.length })}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+      <p className="mt-4 text-xs text-muted">{t("cv.privacy")}</p>
+    </section>
   );
 };
 
-export default Profile;
+export default function Profile() {
+  const { user, setUser, signOut } = useAuth();
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ username: user.username, email: user.email, bio: user.bio || "", skills: user.skills || "" });
+  const [passwords, setPasswords] = useState({ currentPassword: "", newPassword: "" });
+  const [saving, setSaving] = useState(false);
+
+  const save = async (payload, successKey = "toast.saved") => {
+    setSaving(true);
+    try {
+      const body = new FormData();
+      for (const [key, value] of Object.entries(payload)) body.append(key, value);
+      const { data } = await api.put("/me", body);
+      setUser(data);
+      toast.success(t(successKey));
+      return true;
+    } catch (err) {
+      toast.error(t(`error.${errorCode(err)}`));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addSkills = (skills) => {
+    const merged = [...splitSkills(form.skills), ...skills].join(", ");
+    const next = { ...form, skills: merged };
+    setForm(next);
+    save(next, "toast.skillsAdded");
+  };
+
+  const changePassword = async (event) => {
+    event.preventDefault();
+    if (await save(passwords, "toast.passwordChanged")) setPasswords({ currentPassword: "", newPassword: "" });
+  };
+
+  const deleteAccount = async () => {
+    if (!window.confirm(t("confirm.deleteAccount"))) return;
+    await api.delete("/me");
+    signOut();
+    navigate("/");
+  };
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <PageHeader eyebrow={t("profile.eyebrow")} title={t("profile.title")} />
+
+      <div className="space-y-5">
+        <CvImport current={form.skills} onAdd={addSkills} />
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            save(form);
+          }}
+          className="card space-y-5 p-6"
+        >
+          <div className="flex items-center gap-4">
+            <Avatar user={user} size="h-16 w-16 text-2xl" />
+            <label className="btn-ghost cursor-pointer">
+              <Camera size={16} /> {t("profile.changePhoto")}
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => event.target.files[0] && save({ avatar: event.target.files[0] })} />
+            </label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="username">{t("field.username")}</label>
+              <input id="username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="input" required minLength={2} />
+            </div>
+            <div>
+              <label className="label" htmlFor="email">{t("field.email")}</label>
+              <input id="email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="input" disabled={user.is_demo} required />
+            </div>
+          </div>
+          <div>
+            <label className="label" htmlFor="bio">{t("profile.bio")}</label>
+            <textarea id="bio" rows={4} value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} className="input resize-y" maxLength={2000} />
+            <p className="mt-1.5 text-xs text-muted">{t("profile.bioHint")}</p>
+          </div>
+          <div>
+            <label className="label" htmlFor="skills">{t("profile.skills")}</label>
+            <input id="skills" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} className="input" maxLength={1000} placeholder="React, TypeScript, SQL" />
+            <p className="mt-1.5 text-xs text-muted">{t("profile.skillsHint")}</p>
+          </div>
+          <div className="flex justify-end">
+            <button type="submit" disabled={saving} className="btn-primary">{t("action.save")}</button>
+          </div>
+        </form>
+
+        <section className="card flex items-center justify-between gap-4 p-6">
+          <div>
+            <h2 className="font-semibold">{t("profile.language")}</h2>
+            <p className="text-sm text-muted">{t("profile.languageHint")}</p>
+          </div>
+          <LanguageSwitch />
+        </section>
+
+        <section className="card space-y-4 p-6">
+          <div>
+            <h2 className="font-semibold">{t("auto.title")}</h2>
+            <p className="text-sm text-muted">{t("auto.lead")}</p>
+          </div>
+          {[
+            ["auto_tasks", "auto.tasks", "auto.tasksHint"],
+            ["auto_apply", "auto.apply", "auto.applyHint"],
+          ].map(([field, label, hint]) => (
+            <label key={field} className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-line p-4">
+              <span>
+                <span className="block text-sm font-medium">{t(label)}</span>
+                <span className="block text-sm text-muted">{t(hint)}</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={Boolean(user[field])}
+                onChange={(event) => save({ [field]: event.target.checked })}
+                className="mt-1 h-5 w-5 shrink-0 accent-[rgb(var(--accent))]"
+              />
+            </label>
+          ))}
+          {user.inbox_address && (
+            <div>
+              <span className="label">{t("auto.address")}</span>
+              <p className="rounded-xl border border-line bg-sunken/60 px-3.5 py-2.5 font-mono text-xs">{user.inbox_address}</p>
+            </div>
+          )}
+        </section>
+
+        {!user.is_demo && (
+          <form onSubmit={changePassword} className="card space-y-4 p-6">
+            <h2 className="font-semibold">{t("profile.password")}</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="currentPassword">{t("profile.currentPassword")}</label>
+                <input id="currentPassword" type="password" value={passwords.currentPassword} onChange={(event) => setPasswords({ ...passwords, currentPassword: event.target.value })} className="input" required autoComplete="current-password" />
+              </div>
+              <div>
+                <label className="label" htmlFor="newPassword">{t("profile.newPassword")}</label>
+                <input id="newPassword" type="password" value={passwords.newPassword} onChange={(event) => setPasswords({ ...passwords, newPassword: event.target.value })} className="input" required minLength={8} autoComplete="new-password" />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" disabled={saving} className="btn-ghost">{t("profile.changePassword")}</button>
+            </div>
+          </form>
+        )}
+
+        <section className="card flex flex-wrap items-center justify-between gap-4 border-rejected/30 p-6">
+          <div>
+            <h2 className="font-semibold">{t("profile.delete")}</h2>
+            <p className="max-w-sm text-sm text-muted">{t("profile.deleteHint")}</p>
+          </div>
+          <button onClick={deleteAccount} className="btn-danger">{t("profile.delete")}</button>
+        </section>
+      </div>
+    </div>
+  );
+}

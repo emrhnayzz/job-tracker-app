@@ -23,7 +23,15 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]', destructuredArrayIgnorePattern: '^[A-Z_]' },
+      ],
     },
+  },
+  {
+    // Context files export a provider together with its hook.
+    files: ['src/context/**', 'src/i18n/**'],
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
 ])

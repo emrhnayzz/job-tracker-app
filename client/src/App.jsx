@@ -1,108 +1,79 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { useTheme } from "./context/ThemeContext";
-
-// --- COMPONENTS IMPORTS ---
-import Navbar from "./components/Navbar";
-import ProtectedRoute from "./components/ProtectedRoute";
-
-// --- PAGES IMPORTS ---
-import ApplicationList from "./components/ApplicationList";
-import AddApplication from "./components/AddApplication";
-import EditApplication from "./components/EditApplication";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import { useAuth } from "./context/AuthContext";
+import { ApplicationsProvider } from "./context/ApplicationsContext";
+import AppShell from "./components/AppShell";
+import Landing from "./pages/Landing";
+import AuthPage from "./pages/AuthPage";
+import Dashboard from "./pages/Dashboard";
+import ApplicationForm from "./pages/ApplicationForm";
+import ApplicationDetail from "./pages/ApplicationDetail";
+import Inbox from "./pages/Inbox";
+import Insights from "./pages/Insights";
 import Profile from "./pages/Profile";
 
-function App() {
-  const { theme } = useTheme();
+const Splash = () => (
+  <div className="grid min-h-screen place-items-center">
+    <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent" />
+  </div>
+);
 
+// Signed-in area: waits for the session check, then loads the applications once.
+const PrivateArea = () => {
+  const { user } = useAuth();
+  if (user === undefined) return <Splash />;
+  if (user === null) return <Navigate to="/login" replace />;
   return (
-    <Router>
-      {/* 1. Global Toast Config */}
+    <ApplicationsProvider>
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    </ApplicationsProvider>
+  );
+};
+
+// Landing, login and register send signed-in visitors straight to the app.
+const PublicOnly = () => {
+  const { user } = useAuth();
+  const { search } = useLocation();
+  if (user === undefined) return <Splash />;
+  // A shared link like /?demo=1&view=inbox lands on that page after sign-in.
+  const view = new URLSearchParams(search).get("view");
+  const target = view === "insights" || view === "inbox" ? `/app/${view}` : "/app";
+  return user ? <Navigate to={target} replace /> : <Outlet />;
+};
+
+export default function App() {
+  return (
+    <BrowserRouter>
       <Toaster
-        position="top-right"
-        reverseOrder={false}
+        position="bottom-center"
         toastOptions={{
           style: {
-            background: theme === "dark" ? "#333" : "#fff",
-            color: theme === "dark" ? "#fff" : "#333",
+            background: "rgb(var(--ink))",
+            color: "rgb(var(--bg))",
+            borderRadius: "12px",
+            fontSize: "14px",
           },
         }}
       />
-
-      {/* 2. Global Layout Wrapper */}
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        {/* Navigation Bar */}
-        <Navbar />
-
-        {/* 3. Main Content Area */}
-        <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-          <Routes>
-            {/* --- PUBLIC ROUTES --- */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-
-            {/* --- PROTECTED ROUTES --- */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  {/* Header Section with New App Button */}
-                  <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-                        My Applications
-                      </h2>
-                      <p className="text-gray-600 dark:text-gray-400 mt-1 text-lg">
-                        Track and manage your job search process.
-                      </p>
-                    </div>
-
-                    <Link
-                      to="/add"
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl text-base font-semibold transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center gap-2 whitespace-nowrap"
-                    >
-                      <span className="text-xl">+</span> New Application
-                    </Link>
-                  </div>
-
-                  <ApplicationList />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/add"
-              element={
-                <ProtectedRoute>
-                  <AddApplication />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/edit/:id"
-              element={
-                <ProtectedRoute>
-                  <EditApplication />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+      <Routes>
+        <Route element={<PublicOnly />}>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/register" element={<AuthPage mode="register" />} />
+        </Route>
+        <Route path="/app" element={<PrivateArea />}>
+          <Route index element={<Dashboard />} />
+          <Route path="new" element={<ApplicationForm />} />
+          <Route path="a/:id" element={<ApplicationDetail />} />
+          <Route path="a/:id/edit" element={<ApplicationForm />} />
+          <Route path="inbox" element={<Inbox />} />
+          <Route path="insights" element={<Insights />} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;
