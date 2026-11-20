@@ -342,4 +342,16 @@ export default {
 
   "error.mail_too_short": "The text is too short to be an email.",
   "error.application_required": "Please choose the application this email belongs to.",
+
+  "cv.title": "Read my CV",
+  "cv.lead": "Choose your CV as a PDF. Zusage finds your skills in it and adds them to your profile, so the match with every job is right.",
+  "cv.choose": "Choose a PDF",
+  "cv.reading": "Reading …",
+  "cv.found": "{total} skills found, {fresh} of them new. Tap the ones you do not want to keep.",
+  "cv.none": "No known skills were found in this file. Enter them by hand below.",
+  "cv.apply_one": "Add {count} skill",
+  "cv.apply_other": "Add {count} skills",
+  "cv.error": "The file could not be read. Is it a PDF with text, not a scan?",
+  "cv.privacy": "The file stays on your device. Only the list of skills is saved.",
+  "toast.skillsAdded": "Skills added",
 };

@@ -342,4 +342,16 @@ export default {
 
   "error.mail_too_short": "Der Text ist zu kurz für eine E-Mail.",
   "error.application_required": "Bitte wähle die Bewerbung aus, zu der die E-Mail gehört.",
+
+  "cv.title": "Lebenslauf einlesen",
+  "cv.lead": "Wähle deinen Lebenslauf als PDF. Zusage findet darin deine Kenntnisse und trägt sie ins Profil ein, damit die Passung zu jeder Stelle stimmt.",
+  "cv.choose": "PDF auswählen",
+  "cv.reading": "Lese …",
+  "cv.found": "{total} Kenntnisse gefunden, davon {fresh} neu. Tippe an, was nicht übernommen werden soll.",
+  "cv.none": "In dieser Datei wurden keine bekannten Kenntnisse gefunden. Trage sie unten von Hand ein.",
+  "cv.apply_one": "{count} Kenntnis übernehmen",
+  "cv.apply_other": "{count} Kenntnisse übernehmen",
+  "cv.error": "Die Datei konnte nicht gelesen werden. Ist es ein PDF mit Text, kein Scan?",
+  "cv.privacy": "Die Datei bleibt auf deinem Gerät. Gespeichert wird nur die Liste der Kenntnisse.",
+  "toast.skillsAdded": "Kenntnisse übernommen",
 };
